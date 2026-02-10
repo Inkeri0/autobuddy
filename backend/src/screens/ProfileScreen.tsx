@@ -1,0 +1,183 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { COLORS } from '../constants';
+import { useAuth } from '../hooks/useAuth';
+import { signOut } from '../services/auth';
+
+export default function ProfileScreen() {
+  const { user } = useAuth();
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Uitloggen',
+      'Weet je zeker dat je wilt uitloggen?',
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Uitloggen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch (error: any) {
+              Alert.alert('Fout', error.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Profile header */}
+      <View style={styles.header}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>
+            {user?.user_metadata?.full_name?.charAt(0)?.toUpperCase() || '?'}
+          </Text>
+        </View>
+        <Text style={styles.name}>
+          {user?.user_metadata?.full_name || 'Gebruiker'}
+        </Text>
+        <Text style={styles.email}>{user?.email}</Text>
+      </View>
+
+      {/* Menu items */}
+      <View style={styles.menu}>
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>📅</Text>
+          <Text style={styles.menuText}>Mijn afspraken</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>🚗</Text>
+          <Text style={styles.menuText}>Mijn auto's</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>⭐</Text>
+          <Text style={styles.menuText}>Favoriete garages</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>🔔</Text>
+          <Text style={styles.menuText}>Meldingen</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>⚙️</Text>
+          <Text style={styles.menuText}>Instellingen</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuIcon}>❓</Text>
+          <Text style={styles.menuText}>Help & Support</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Sign out */}
+      <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+        <Text style={styles.signOutText}>Uitloggen</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.version}>AutoBuddy v1.0.0</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    backgroundColor: COLORS.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+  name: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  email: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  menu: {
+    backgroundColor: COLORS.surface,
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  menuIcon: {
+    fontSize: 20,
+    marginRight: 14,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  menuArrow: {
+    fontSize: 22,
+    color: COLORS.textLight,
+  },
+  signOutButton: {
+    margin: 20,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: COLORS.danger,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: COLORS.danger,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  version: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: COLORS.textLight,
+  },
+});

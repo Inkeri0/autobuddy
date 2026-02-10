@@ -1,0 +1,250 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* AutoBuddy Color Palette */
+    --background: 216 25% 97%; /* #F5F7FA */
+    --foreground: 213 47% 24%; /* #1E3A5F base */
+
+    --card: 0 0% 100%;
+    --card-foreground: 213 47% 24%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 47% 24%;
+
+    --primary: 213 47% 24%; /* #1E3A5F - Deep Blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 216 25% 95%;
+    --secondary-foreground: 213 47% 24%;
+
+    --muted: 216 20% 93%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 18 100% 60%; /* #FF6B35 - Orange */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 47% 24%;
+
+    --radius: 0.75rem;
+
+    /* Status colors for availability */
+    --status-green: 142 76% 36%;
+    --status-orange: 38 92% 50%;
+    --status-red: 0 84% 60%;
+
+    /* Booking status colors */
+    --booking-pending: 38 92% 50%;
+    --booking-confirmed: 217 91% 60%;
+    --booking-in-progress: 280 85% 50%;
+    --booking-completed: 142 76% 36%;
+    --booking-cancelled: 0 0% 45%;
+    --booking-no-show: 0 84% 60%;
+
+    --sidebar-background: 213 47% 24%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 18 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 47% 30%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 213 47% 30%;
+    --sidebar-ring: 18 100% 60%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 14%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 18 100% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 213 47% 24%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 18 100% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-foreground;
+  }
+}
+
+@layer components {
+  /* Dashboard card with elegant shadow */
+  .dashboard-card {
+    @apply bg-card rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Stat card styles */
+  .stat-card {
+    @apply dashboard-card p-6;
+  }
+
+  /* Status badge base */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Availability status indicators */
+  .availability-green {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .availability-orange {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .availability-red {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Booking status badges */
+  .booking-pending {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .booking-confirmed {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .booking-in-progress {
+    @apply bg-purple-100 text-purple-800;
+  }
+
+  .booking-completed {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .booking-cancelled {
+    @apply bg-gray-100 text-gray-600;
+  }
+
+  .booking-no-show {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Sidebar active state */
+  .sidebar-link-active {
+    @apply bg-sidebar-accent text-sidebar-primary;
+  }
+
+  /* Form input focus state */
+  .input-focus {
+    @apply focus:ring-2 focus:ring-primary/20 focus:border-primary;
+  }
+
+  /* Calendar slot states */
+  .slot-available {
+    @apply bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer;
+  }
+
+  .slot-booked {
+    @apply bg-blue-50 border-blue-200;
+  }
+
+  .slot-blocked {
+    @apply bg-gray-100 border-gray-200;
+  }
+}
+
+@layer utilities {
+  /* Gradient backgrounds */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary/80;
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-accent to-accent/80;
+  }
+
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary/90 to-accent;
+  }
+
+  /* Smooth scrollbar */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  /* Animation utilities */
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-in {
+    animation: slideIn 0.2s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+}
