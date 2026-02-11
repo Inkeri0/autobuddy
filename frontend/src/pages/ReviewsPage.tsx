@@ -243,14 +243,14 @@ export default function ReviewsPage() {
                       <div className="flex-shrink-0">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
                           <span className="text-sm font-medium text-primary">
-                            {((review as any).profile?.full_name || 'K')[0].toUpperCase()}
+                            {(review.profile?.full_name || 'K')[0].toUpperCase()}
                           </span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-medium text-foreground">
-                            {(review as any).profile?.full_name || 'Klant'}
+                            {review.profile?.full_name || 'Klant'}
                           </p>
                           <span className="text-xs text-muted-foreground">
                             {format(parseISO(review.created_at), 'd MMM yyyy', { locale: nl })}
