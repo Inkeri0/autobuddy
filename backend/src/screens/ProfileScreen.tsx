@@ -6,12 +6,14 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../services/auth';
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
 
   const handleSignOut = () => {
     Alert.alert(
@@ -51,19 +53,19 @@ export default function ProfileScreen() {
 
       {/* Menu items */}
       <View style={styles.menu}>
-        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MijnAfspraken')}>
           <Text style={styles.menuIcon}>📅</Text>
           <Text style={styles.menuText}>Mijn afspraken</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('MijnAutos')}>
           <Text style={styles.menuIcon}>🚗</Text>
           <Text style={styles.menuText}>Mijn auto's</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('FavorieteGarages')}>
           <Text style={styles.menuIcon}>⭐</Text>
           <Text style={styles.menuText}>Favoriete garages</Text>
           <Text style={styles.menuArrow}>›</Text>

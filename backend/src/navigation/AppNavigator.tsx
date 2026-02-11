@@ -14,6 +14,9 @@ import MapScreen from '../screens/MapScreen';
 import GarageDetailScreen from '../screens/GarageDetailScreen';
 import BookingScreen from '../screens/BookingScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import MijnAfsprakenScreen from '../screens/MijnAfsprakenScreen';
+import MijnAutosScreen from '../screens/MijnAutosScreen';
+import FavorieteGaragesScreen from '../screens/FavorieteGaragesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -125,6 +128,21 @@ export default function AppNavigator() {
               name="Booking"
               component={BookingScreen}
               options={{ title: 'Afspraak maken' }}
+            />
+            <Stack.Screen
+              name="MijnAfspraken"
+              component={MijnAfsprakenScreen}
+              options={{ title: 'Mijn afspraken' }}
+            />
+            <Stack.Screen
+              name="MijnAutos"
+              component={MijnAutosScreen}
+              options={{ title: "Mijn auto's" }}
+            />
+            <Stack.Screen
+              name="FavorieteGarages"
+              component={FavorieteGaragesScreen}
+              options={{ title: 'Favoriete garages' }}
             />
           </>
         )}

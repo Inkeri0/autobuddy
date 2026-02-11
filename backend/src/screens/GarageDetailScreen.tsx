@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,41 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { COLORS, AVAILABILITY_COLORS } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useGarageDetail } from '../hooks/useGarages';
+import { useAuth } from '../hooks/useAuth';
+import { isFavorited, addFavorite, removeFavorite } from '../services/garageService';
 
 export default function GarageDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { garageId } = route.params;
   const { garage, services, loading, error } = useGarageDetail(garageId);
+  const { user } = useAuth();
+  const [favorited, setFavorited] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+
+  useEffect(() => {
+    if (user && garageId) {
+      isFavorited(user.id, garageId).then(setFavorited).catch(() => {});
+    }
+  }, [user, garageId]);
+
+  const toggleFavorite = async () => {
+    if (!user || favLoading) return;
+    setFavLoading(true);
+    try {
+      if (favorited) {
+        await removeFavorite(user.id, garageId);
+        setFavorited(false);
+      } else {
+        await addFavorite(user.id, garageId);
+        setFavorited(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle favorite:', err);
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -44,7 +73,12 @@ export default function GarageDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={{ marginBottom: 20 }}>
-        <Text style={styles.name}>{garage.name}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={[styles.name, { flex: 1 }]}>{garage.name}</Text>
+          <TouchableOpacity onPress={toggleFavorite} disabled={favLoading} style={{ padding: 4 }}>
+            <Text style={{ fontSize: 24 }}>{favorited ? '❤️' : '🤍'}</Text>
+          </TouchableOpacity>
+        </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
           <View style={[styles.dot, { backgroundColor: AVAILABILITY_COLORS[garage.availability_status as AvailabilityStatus] || COLORS.success }]} />
           <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.textSecondary }}>{statusLabel[garage.availability_status] || 'Beschikbaar'}</Text>

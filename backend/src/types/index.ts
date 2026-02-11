@@ -166,3 +166,26 @@ export interface Review {
   created_at: string;
   user?: Pick<User, 'full_name' | 'avatar_url'>;
 }
+
+// --- Car Types ---
+export interface Car {
+  id: string;
+  user_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  license_plate: string;
+  mileage?: number;
+  is_default: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+// --- Favorite Types ---
+export interface Favorite {
+  id: string;
+  user_id: string;
+  garage_id: string;
+  created_at: string;
+  garage?: Garage;
+}

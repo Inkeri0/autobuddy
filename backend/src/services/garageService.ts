@@ -142,3 +142,153 @@ export async function fetchGarageReviews(garageId: string) {
   if (error) throw error;
   return data || [];
 }
+
+// ============================================
+// BOOKING ACTIONS
+// ============================================
+
+// Cancel a booking
+export async function cancelBooking(bookingId: string) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', bookingId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// ============================================
+// CARS CRUD
+// ============================================
+
+export async function fetchUserCars(userId: string) {
+  const { data, error } = await supabase
+    .from('cars')
+    .select('*')
+    .eq('user_id', userId)
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createCar(car: {
+  user_id: string;
+  brand: string;
+  model: string;
+  year: number;
+  license_plate: string;
+  mileage?: number;
+  is_default?: boolean;
+}) {
+  const { data, error } = await supabase
+    .from('cars')
+    .insert(car)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateCar(carId: string, updates: {
+  brand?: string;
+  model?: string;
+  year?: number;
+  license_plate?: string;
+  mileage?: number;
+}) {
+  const { data, error } = await supabase
+    .from('cars')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', carId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteCar(carId: string) {
+  const { error } = await supabase
+    .from('cars')
+    .delete()
+    .eq('id', carId);
+
+  if (error) throw error;
+}
+
+export async function setDefaultCar(userId: string, carId: string) {
+  // Unset current default
+  await supabase
+    .from('cars')
+    .update({ is_default: false, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('is_default', true);
+
+  // Set new default
+  const { data, error } = await supabase
+    .from('cars')
+    .update({ is_default: true, updated_at: new Date().toISOString() })
+    .eq('id', carId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// ============================================
+// FAVORITES
+// ============================================
+
+export async function fetchUserFavorites(userId: string) {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select(`
+      *,
+      garages:garage_id (*)
+    `)
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addFavorite(userId: string, garageId: string) {
+  const { data, error } = await supabase
+    .from('favorites')
+    .insert({ user_id: userId, garage_id: garageId })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function removeFavorite(userId: string, garageId: string) {
+  const { error } = await supabase
+    .from('favorites')
+    .delete()
+    .eq('user_id', userId)
+    .eq('garage_id', garageId);
+
+  if (error) throw error;
+}
+
+export async function isFavorited(userId: string, garageId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('favorites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('garage_id', garageId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}
