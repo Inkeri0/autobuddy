@@ -2,7 +2,7 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Text, View, ActivityIndicator } from 'react-native';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 
@@ -86,7 +86,12 @@ export default function AppNavigator() {
   const { session, loading } = useAuth();
 
   if (loading) {
-    return null; // Could add a splash screen here
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary }}>
+        <Text style={{ fontSize: 28, fontWeight: '700', color: '#fff' }}>AutoBuddy</Text>
+        <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
+      </View>
+    );
   }
 
   return (

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { COLORS, SERVICE_LABELS, AVAILABILITY_COLORS } from '../constants';
@@ -53,12 +54,15 @@ export default function SearchScreen() {
           try {
             const services = await fetchGarageServices(g.id);
             servicesMap[g.id] = services;
-          } catch {}
+          } catch (err) {
+            console.error(`Failed to load services for garage ${g.id}:`, err);
+          }
         })
       );
       setGarageServices(servicesMap);
     } catch (err) {
       console.error('Failed to load garages:', err);
+      Alert.alert('Fout', 'Kon garages niet laden. Probeer het opnieuw.');
     } finally {
       setLoading(false);
     }

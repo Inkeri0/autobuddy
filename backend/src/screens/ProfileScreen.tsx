@@ -51,37 +51,37 @@ export default function ProfileScreen() {
 
       {/* Menu items */}
       <View style={styles.menu}>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>📅</Text>
           <Text style={styles.menuText}>Mijn afspraken</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>🚗</Text>
           <Text style={styles.menuText}>Mijn auto's</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>⭐</Text>
           <Text style={styles.menuText}>Favoriete garages</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>🔔</Text>
           <Text style={styles.menuText}>Meldingen</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>⚙️</Text>
           <Text style={styles.menuText}>Instellingen</Text>
           <Text style={styles.menuArrow}>›</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity style={styles.menuItem} onPress={() => Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.')}>
           <Text style={styles.menuIcon}>❓</Text>
           <Text style={styles.menuText}>Help & Support</Text>
           <Text style={styles.menuArrow}>›</Text>

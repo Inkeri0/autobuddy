@@ -79,7 +79,10 @@ export default function MapScreen() {
     let cancelled = false;
     fetchBookingCountsByDate(selectedDate.date)
       .then((counts) => { if (!cancelled) setBookingCounts(counts); })
-      .catch(() => { if (!cancelled) setBookingCounts({}); });
+      .catch((err) => {
+        console.error('Failed to load booking counts:', err);
+        if (!cancelled) setBookingCounts({});
+      });
     return () => { cancelled = true; };
   }, [selectedDate.date]);
 
@@ -191,7 +194,6 @@ export default function MapScreen() {
                   latitude: garage.latitude,
                   longitude: garage.longitude,
                 }}
-                tracksViewChanges={false}
                 pinColor={PIN_COLORS[status]}
               >
                 <Callout onPress={() => handleGaragePress(garage.id)}>

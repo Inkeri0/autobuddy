@@ -264,6 +264,12 @@ CREATE POLICY "Anyone can view reviews" ON public.reviews
   FOR SELECT USING (true);
 CREATE POLICY "Users can create reviews" ON public.reviews
   FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own reviews" ON public.reviews
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Users can update own bookings (e.g. cancel)
+CREATE POLICY "Users can update own bookings" ON public.bookings
+  FOR UPDATE USING (auth.uid() = user_id);
 
 -- ============================================
 -- INDEXES
@@ -271,8 +277,11 @@ CREATE POLICY "Users can create reviews" ON public.reviews
 CREATE INDEX idx_garages_owner_id ON public.garages(owner_id);
 CREATE INDEX idx_garages_city ON public.garages(city);
 CREATE INDEX idx_garage_services_garage_id ON public.garage_services(garage_id);
+CREATE INDEX idx_garage_services_category ON public.garage_services(category);
 CREATE INDEX idx_bookings_garage_id ON public.bookings(garage_id);
 CREATE INDEX idx_bookings_user_id ON public.bookings(user_id);
 CREATE INDEX idx_bookings_date ON public.bookings(date);
+CREATE INDEX idx_bookings_user_date ON public.bookings(user_id, date);
 CREATE INDEX idx_availability_slots_garage_date ON public.availability_slots(garage_id, date);
 CREATE INDEX idx_reviews_garage_id ON public.reviews(garage_id);
+CREATE INDEX idx_reviews_created_at ON public.reviews(created_at);

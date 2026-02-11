@@ -36,7 +36,9 @@ export default function HomeScreen() {
     if (user?.id) {
       fetchUserBookings(user.id)
         .then(setBookings)
-        .catch(() => {})
+        .catch((err) => {
+          console.error('Failed to load bookings:', err);
+        })
         .finally(() => setBookingsLoading(false));
     } else {
       setBookingsLoading(false);

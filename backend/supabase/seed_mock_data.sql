@@ -325,7 +325,31 @@ VALUES
  ARRAY['Mercedes-Benz', 'Volkswagen', 'Ford', 'Renault', 'Fiat', 'Iveco', 'MAN'],
  false,
  '{"monday":{"open":"07:00","close":"17:30","closed":false},"tuesday":{"open":"07:00","close":"17:30","closed":false},"wednesday":{"open":"07:00","close":"17:30","closed":false},"thursday":{"open":"07:00","close":"17:30","closed":false},"friday":{"open":"07:00","close":"16:00","closed":false},"saturday":{"open":"08:00","close":"12:00","closed":false},"sunday":{"open":"00:00","close":"00:00","closed":true}}'::jsonb,
- 'red', 4.4, 134, true);
+ 'red', 4.4, 134, true),
+
+-- 17. Maastricht - MU Automotive (Japanese cars)
+('d1810eb5-f0bb-4844-84cc-df0200e3b26c',
+ '49ef0b7c-f799-46a7-ac3b-7902f37d2a8d',
+ 'MU Automotive',
+ 'Specialist in Japanse auto''s. Mazda, Toyota, Nissan, Suzuki - onderhoud, reparatie en APK. Originele en aftermarket onderdelen.',
+ 'Stationsstraat 25', 'Maastricht', 'Limburg', 'NL', '6221BR',
+ 50.8488, 5.7052, '043-555-1717', 'info@muautomotive.nl', NULL,
+ ARRAY['Japanse Auto''s', 'APK Station', 'Alle merken'],
+ ARRAY['Mazda', 'Toyota', 'Nissan', 'Suzuki', 'Honda', 'Subaru', 'Mitsubishi', 'Lexus'],
+ false,
+ '{"monday":{"open":"08:00","close":"17:30","closed":false},"tuesday":{"open":"08:00","close":"17:30","closed":false},"wednesday":{"open":"08:00","close":"17:30","closed":false},"thursday":{"open":"08:00","close":"17:30","closed":false},"friday":{"open":"08:00","close":"17:00","closed":false},"saturday":{"open":"09:00","close":"13:00","closed":false},"sunday":{"open":"00:00","close":"00:00","closed":true}}'::jsonb,
+ 'orange', 4.5, 67, true);
+
+
+-- ============================================
+-- MU AUTOMOTIVE SERVICES
+-- ============================================
+
+INSERT INTO public.garage_services (id, garage_id, category, name, description, price_from, price_to, duration_minutes, is_available)
+VALUES
+('c80885e6-a761-48e6-81a5-3a173ac214b0', 'd1810eb5-f0bb-4844-84cc-df0200e3b26c', 'oil_change', 'Oliebeurt Japans', 'Speciale olie voor Japanse motoren + OEM filter', 59, 99, 30, true),
+('2e06edb3-e763-484c-8ba4-1d8fb7f040fe', 'd1810eb5-f0bb-4844-84cc-df0200e3b26c', 'small_service', 'Kleine Beurt', 'Olie, filters, inspectie 25 punten', 99, 169, 60, true),
+('f328ca44-4e70-4cd7-8d47-671e56d53e90', 'd1810eb5-f0bb-4844-84cc-df0200e3b26c', 'apk', 'APK Keuring', 'APK keuring', 30, 40, 30, true);
 
 
 -- ============================================
