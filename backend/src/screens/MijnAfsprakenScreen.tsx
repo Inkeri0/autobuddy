@@ -136,7 +136,7 @@ export default function MijnAfsprakenScreen() {
       <TouchableOpacity
         style={styles.card}
         onPress={() =>
-          navigation.navigate('GarageDetail', { garageId: item.garage_id })
+          navigation.navigate('AfspraakDetail', { bookingId: item.id })
         }
       >
         <View style={styles.cardHeader}>
@@ -186,6 +186,15 @@ export default function MijnAfsprakenScreen() {
             <Text style={styles.detailLabel}>Locatie</Text>
             <Text style={styles.detailValue}>{garage.city}</Text>
           </View>
+        )}
+
+        {item.status === 'completed' && (
+          <TouchableOpacity
+            style={styles.reviewButton}
+            onPress={() => navigation.navigate('Review', { bookingId: item.id })}
+          >
+            <Text style={styles.reviewText}>Beoordeel</Text>
+          </TouchableOpacity>
         )}
 
         {canCancel(item.status) && (
@@ -308,6 +317,14 @@ const styles = StyleSheet.create({
   },
   detailLabel: { fontSize: 13, color: COLORS.textSecondary },
   detailValue: { fontSize: 13, fontWeight: '500', color: COLORS.text },
+  reviewButton: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: COLORS.secondary,
+    alignItems: 'center',
+  },
+  reviewText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
   cancelButton: {
     marginTop: 12,
     padding: 10,

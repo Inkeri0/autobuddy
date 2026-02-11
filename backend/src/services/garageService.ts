@@ -143,6 +143,22 @@ export async function fetchGarageReviews(garageId: string) {
   return data || [];
 }
 
+// Fetch a single booking by ID with full garage + service details
+export async function fetchBookingById(bookingId: string) {
+  const { data, error } = await supabase
+    .from('bookings')
+    .select(`
+      *,
+      garages:garage_id (*),
+      garage_services:service_id (*)
+    `)
+    .eq('id', bookingId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // ============================================
 // BOOKING ACTIONS
 // ============================================
@@ -291,4 +307,126 @@ export async function isFavorited(userId: string, garageId: string): Promise<boo
 
   if (error) throw error;
   return !!data;
+}
+
+// ============================================
+// REVIEWS
+// ============================================
+
+// Check if user already reviewed a booking
+export async function fetchReviewForBooking(userId: string, bookingId: string) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('booking_id', bookingId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+// Create a review
+export async function createReview(review: {
+  user_id: string;
+  garage_id: string;
+  booking_id: string;
+  rating: number;
+  comment?: string;
+  service_quality: number;
+  honesty: number;
+  speed: number;
+}) {
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert(review)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  // Update garage average rating and total reviews via RPC
+  // This calls a Supabase database function that bypasses RLS
+  const { error: rpcError } = await supabase.rpc('update_garage_rating', {
+    p_garage_id: review.garage_id,
+  });
+
+  if (rpcError) {
+    // Fallback: try direct update (works if RLS allows it)
+    console.warn('RPC update_garage_rating failed, trying direct update:', rpcError.message);
+    const { data: stats } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('garage_id', review.garage_id);
+
+    if (stats && stats.length > 0) {
+      const total = stats.length;
+      const avg = stats.reduce((sum, r) => sum + r.rating, 0) / total;
+      const { error: updateErr } = await supabase
+        .from('garages')
+        .update({ average_rating: Math.round(avg * 10) / 10, total_reviews: total })
+        .eq('id', review.garage_id);
+
+      if (updateErr) {
+        console.error('Direct garage rating update also failed:', updateErr.message);
+      }
+    }
+  }
+
+  return data;
+}
+
+// ============================================
+// DEV / SEED
+// ============================================
+
+// Seed a completed booking for testing the review flow
+export async function seedCompletedBooking(userId: string) {
+  // 1. Pick the first active garage
+  const { data: garage, error: gErr } = await supabase
+    .from('garages')
+    .select('id, name')
+    .eq('is_active', true)
+    .limit(1)
+    .single();
+
+  if (gErr || !garage) throw new Error('Geen garages gevonden. Voeg eerst een garage toe.');
+
+  // 2. Pick the first available service for that garage
+  const { data: service, error: sErr } = await supabase
+    .from('garage_services')
+    .select('id, name')
+    .eq('garage_id', garage.id)
+    .eq('is_available', true)
+    .limit(1)
+    .single();
+
+  if (sErr || !service) throw new Error(`Geen services gevonden voor ${garage.name}.`);
+
+  // 3. Create a completed booking dated 3 days ago
+  const pastDate = new Date();
+  pastDate.setDate(pastDate.getDate() - 3);
+  const dateStr = pastDate.toISOString().split('T')[0];
+
+  const { data: booking, error: bErr } = await supabase
+    .from('bookings')
+    .insert({
+      user_id: userId,
+      garage_id: garage.id,
+      service_id: service.id,
+      date: dateStr,
+      time_slot: '10:00',
+      status: 'completed',
+      car_brand: 'BMW',
+      car_model: '3 Serie',
+      car_year: 2020,
+      car_license_plate: 'AB-123-CD',
+      car_mileage: 45000,
+      notes: 'Graag ook banden checken',
+    })
+    .select()
+    .single();
+
+  if (bErr) throw bErr;
+  return booking;
 }

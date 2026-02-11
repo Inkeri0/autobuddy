@@ -10,10 +10,24 @@ import { useNavigation } from '@react-navigation/native';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import { signOut } from '../services/auth';
+import { seedCompletedBooking } from '../services/garageService';
 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+
+  const handleSeedBooking = async () => {
+    if (!user?.id) return;
+    try {
+      const booking = await seedCompletedBooking(user.id);
+      Alert.alert(
+        'Test afspraak aangemaakt',
+        `Afgeronde afspraak op ${booking.date} om ${booking.time_slot}.\n\nGa naar Mijn afspraken > Afgerond om het te zien.`,
+      );
+    } catch (err: any) {
+      Alert.alert('Fout', err.message || 'Kon test data niet aanmaken.');
+    }
+  };
 
   const handleSignOut = () => {
     Alert.alert(
@@ -93,6 +107,11 @@ export default function ProfileScreen() {
       {/* Sign out */}
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Uitloggen</Text>
+      </TouchableOpacity>
+
+      {/* Dev tools */}
+      <TouchableOpacity style={styles.seedButton} onPress={handleSeedBooking}>
+        <Text style={styles.seedText}>+ Test afspraak (afgerond)</Text>
       </TouchableOpacity>
 
       <Text style={styles.version}>AutoBuddy v1.0.0</Text>
@@ -176,6 +195,21 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     fontSize: 16,
     fontWeight: '600',
+  },
+  seedButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  seedText: {
+    color: COLORS.textSecondary,
+    fontSize: 13,
+    fontWeight: '500',
   },
   version: {
     textAlign: 'center',

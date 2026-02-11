@@ -32,23 +32,24 @@ export function useGarageDetail(garageId: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!garageId) return;
-
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await fetchGarageById(garageId);
-        setGarage(data.garage);
-        setServices(data.services);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    })();
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchGarageById(garageId);
+      setGarage(data.garage);
+      setServices(data.services);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, [garageId]);
 
-  return { garage, services, loading, error };
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { garage, services, loading, error, refresh: load };
 }

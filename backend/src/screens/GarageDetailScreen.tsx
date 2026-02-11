@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,21 +8,29 @@ import {
   Linking,
   ActivityIndicator,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { COLORS, AVAILABILITY_COLORS } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useGarageDetail } from '../hooks/useGarages';
 import { useAuth } from '../hooks/useAuth';
 import { isFavorited, addFavorite, removeFavorite } from '../services/garageService';
+import StarDisplay from '../components/StarDisplay';
 
 export default function GarageDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { garageId } = route.params;
-  const { garage, services, loading, error } = useGarageDetail(garageId);
+  const { garage, services, loading, error, refresh } = useGarageDetail(garageId);
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
+
+  // Refetch garage data when screen regains focus (e.g. after placing a review)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   useEffect(() => {
     if (user && garageId) {
@@ -110,15 +118,17 @@ export default function GarageDetailScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.card, { alignItems: 'center', marginBottom: 24 }]}>
+      <TouchableOpacity
+        style={[styles.card, { alignItems: 'center', marginBottom: 24 }]}
+        onPress={() => navigation.navigate('GarageReviews', { garageId: garage.id, garageName: garage.name })}
+      >
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
           <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.text, marginRight: 10 }}>{(garage.average_rating || 0).toFixed(1)}</Text>
-          <Text style={{ fontSize: 20, color: '#F59E0B' }}>
-            {'★'.repeat(Math.round(garage.average_rating || 0))}{'☆'.repeat(5 - Math.round(garage.average_rating || 0))}
-          </Text>
+          <StarDisplay rating={garage.average_rating || 0} size={20} />
         </View>
         <Text style={{ fontSize: 14, color: COLORS.textSecondary }}>{garage.total_reviews || 0} reviews</Text>
-      </View>
+        <Text style={{ fontSize: 12, color: COLORS.secondary, marginTop: 6, fontWeight: '600' }}>Bekijk alle beoordelingen →</Text>
+      </TouchableOpacity>
 
       {(garage.brands_serviced?.length > 0 || garage.specializations?.length > 0) && (
         <>

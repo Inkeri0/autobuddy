@@ -14,6 +14,7 @@ import { COLORS, AVAILABILITY_COLORS } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserFavorites, removeFavorite } from '../services/garageService';
+import StarDisplay from '../components/StarDisplay';
 
 export default function FavorieteGaragesScreen() {
   const { user } = useAuth();
@@ -127,11 +128,8 @@ export default function FavorieteGaragesScreen() {
         </View>
 
         <View style={styles.ratingRow}>
-          <Text style={styles.ratingStars}>
-            {'★'.repeat(Math.round(garage.average_rating || 0))}
-            {'☆'.repeat(5 - Math.round(garage.average_rating || 0))}
-          </Text>
-          <Text style={styles.ratingText}>
+          <StarDisplay rating={garage.average_rating || 0} size={14} />
+          <Text style={[styles.ratingText, { marginLeft: 6 }]}>
             {(garage.average_rating || 0).toFixed(1)} (
             {garage.total_reviews || 0} reviews)
           </Text>
@@ -227,7 +225,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusLabel: { fontSize: 12, fontWeight: '500', color: COLORS.textSecondary },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  ratingStars: { color: '#F59E0B', fontSize: 14, marginRight: 6 },
+  ratingStars: { fontSize: 14, marginRight: 6 },
   ratingText: { fontSize: 13, color: COLORS.textSecondary },
   tagRow: {
     flexDirection: 'row',

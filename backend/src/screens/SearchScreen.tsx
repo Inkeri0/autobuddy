@@ -13,6 +13,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { COLORS, SERVICE_LABELS, AVAILABILITY_COLORS } from '../constants';
 import { ServiceCategory, AvailabilityStatus } from '../types';
 import { fetchGarages, fetchGarageServices } from '../services/garageService';
+import StarDisplay from '../components/StarDisplay';
 
 const ALL_CATEGORIES: ServiceCategory[] = [
   'apk', 'oil_change', 'small_service', 'major_service',
@@ -140,8 +141,8 @@ export default function SearchScreen() {
               </View>
 
               <View style={styles.ratingRow}>
-                <Text style={styles.ratingStars}>{'★'.repeat(Math.round(garage.average_rating || 0))}{'☆'.repeat(5 - Math.round(garage.average_rating || 0))}</Text>
-                <Text style={styles.ratingText}>{(garage.average_rating || 0).toFixed(1)} ({garage.total_reviews || 0} reviews)</Text>
+                <StarDisplay rating={garage.average_rating || 0} size={14} />
+                <Text style={[styles.ratingText, { marginLeft: 6 }]}>{(garage.average_rating || 0).toFixed(1)} ({garage.total_reviews || 0} reviews)</Text>
               </View>
 
               {garage.brands_serviced?.length > 0 && (
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
   statusLabel: { fontSize: 12, fontWeight: '500', color: COLORS.textSecondary },
   ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  ratingStars: { color: '#F59E0B', fontSize: 14, marginRight: 6 },
+  ratingStars: { fontSize: 14, marginRight: 6 },
   ratingText: { fontSize: 13, color: COLORS.textSecondary },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10, gap: 6 },
   tag: { backgroundColor: COLORS.background, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },

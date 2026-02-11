@@ -115,7 +115,7 @@ export default function HomeScreen() {
         <ActivityIndicator color={COLORS.primary} style={{ paddingVertical: 20 }} />
       ) : upcomingBookings.length > 0 ? (
         upcomingBookings.slice(0, 3).map((booking) => (
-          <View key={booking.id} style={styles.bookingCard}>
+          <TouchableOpacity key={booking.id} style={styles.bookingCard} onPress={() => navigation.navigate('AfspraakDetail', { bookingId: booking.id })}>
             <View style={styles.bookingHeader}>
               <Text style={styles.bookingGarage}>{booking.garages?.name || 'Garage'}</Text>
               <View style={[styles.statusBadge, {
@@ -136,7 +136,7 @@ export default function HomeScreen() {
             <Text style={styles.bookingDate}>
               📅 {booking.date} om {booking.time_slot}
             </Text>
-          </View>
+          </TouchableOpacity>
         ))
       ) : (
         <View style={styles.emptyState}>
