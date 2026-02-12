@@ -199,6 +199,7 @@ export async function createCar(car: {
   year: number;
   license_plate: string;
   mileage?: number;
+  photo_url?: string;
   is_default?: boolean;
 }) {
   const { data, error } = await supabase
@@ -217,6 +218,7 @@ export async function updateCar(carId: string, updates: {
   year?: number;
   license_plate?: string;
   mileage?: number;
+  photo_url?: string;
 }) {
   const { data, error } = await supabase
     .from('cars')
@@ -256,6 +258,43 @@ export async function setDefaultCar(userId: string, carId: string) {
 
   if (error) throw error;
   return data;
+}
+
+// ============================================
+// CAR PHOTOS
+// ============================================
+
+export async function uploadCarPhoto(carId: string, uri: string): Promise<string> {
+  const contentType = 'image/jpeg';
+  const filePath = `${carId}.jpg`;
+
+  const response = await fetch(uri);
+  const arrayBuffer = await response.arrayBuffer();
+
+  const { error: uploadError } = await supabase.storage
+    .from('car-photos')
+    .upload(filePath, arrayBuffer, {
+      contentType,
+      upsert: true,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from('car-photos')
+    .getPublicUrl(filePath);
+
+  const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+  // Update the car record with the photo URL
+  const { error: updateError } = await supabase
+    .from('cars')
+    .update({ photo_url: publicUrl, updated_at: new Date().toISOString() })
+    .eq('id', carId);
+
+  if (updateError) throw updateError;
+
+  return publicUrl;
 }
 
 // ============================================

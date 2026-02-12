@@ -43,18 +43,19 @@ export async function getCurrentUser() {
 // ============================================
 
 export async function uploadAvatar(userId: string, uri: string): Promise<string> {
-  const ext = uri.split('.').pop()?.toLowerCase() || 'jpg';
-  const filePath = `${userId}.${ext}`;
+  // Always use jpg to keep filePath consistent across uploads
+  const contentType = 'image/jpeg';
+  const filePath = `${userId}.jpg`;
 
-  // Read the file as blob
+  // Read the file as ArrayBuffer (more reliable than blob in React Native)
   const response = await fetch(uri);
-  const blob = await response.blob();
+  const arrayBuffer = await response.arrayBuffer();
 
   // Upload to Supabase Storage (upsert to overwrite existing)
   const { error: uploadError } = await supabase.storage
     .from('avatars')
-    .upload(filePath, blob, {
-      contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+    .upload(filePath, arrayBuffer, {
+      contentType,
       upsert: true,
     });
 

@@ -164,7 +164,7 @@ export default function ProfileScreen() {
           activeOpacity={0.8}
           disabled={uploading}
         >
-          <View style={styles.avatar}>
+          <View style={[styles.avatar, avatarUrl && !uploading && styles.avatarWithImage]}>
             {uploading ? (
               <ActivityIndicator size="large" color={COLORS.white} />
             ) : avatarUrl ? (
@@ -280,6 +280,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarWithImage: {
+    backgroundColor: COLORS.border,
     shadowColor: COLORS.secondary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,

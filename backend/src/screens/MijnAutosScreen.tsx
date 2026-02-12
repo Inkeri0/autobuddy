@@ -11,10 +11,15 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  ScrollView,
+  Image,
+  ActionSheetIOS,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -23,6 +28,7 @@ import {
   updateCar,
   deleteCar,
   setDefaultCar,
+  uploadCarPhoto,
 } from '../services/garageService';
 import { Car } from '../types';
 
@@ -104,6 +110,70 @@ export default function MijnAutosScreen() {
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [form, setForm] = useState<CarForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null); // carId being uploaded
+
+  const pickCarPhoto = async () => {
+    const showPicker = async (source: 'camera' | 'library') => {
+      if (source === 'camera') {
+        const perm = await ImagePicker.requestCameraPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert('Geen toegang', 'Camera-toegang is nodig om een foto te maken.');
+          return;
+        }
+        const result = await ImagePicker.launchCameraAsync({
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+        if (!result.canceled) setPhotoUri(result.assets[0].uri);
+      } else {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) {
+          Alert.alert('Geen toegang', 'Galerij-toegang is nodig om een foto te kiezen.');
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+        if (!result.canceled) setPhotoUri(result.assets[0].uri);
+      }
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Annuleren', 'Maak foto', 'Kies uit galerij'],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) showPicker('camera');
+          if (idx === 2) showPicker('library');
+        },
+      );
+    } else {
+      Alert.alert('Foto kiezen', '', [
+        { text: 'Maak foto', onPress: () => showPicker('camera') },
+        { text: 'Kies uit galerij', onPress: () => showPicker('library') },
+        { text: 'Annuleren', style: 'cancel' },
+      ]);
+    }
+  };
+
+  const handleUploadPhotoForCar = async (carId: string, uri: string) => {
+    setUploadingPhoto(carId);
+    try {
+      await uploadCarPhoto(carId, uri);
+      loadCars();
+    } catch (err) {
+      console.error('Failed to upload car photo:', err);
+      Alert.alert('Fout', 'Kon foto niet uploaden.');
+    } finally {
+      setUploadingPhoto(null);
+    }
+  };
 
   const loadCars = useCallback(async () => {
     if (!user) return;
@@ -131,6 +201,7 @@ export default function MijnAutosScreen() {
   const openAddForm = () => {
     setForm(EMPTY_FORM);
     setEditingCarId(null);
+    setPhotoUri(null);
     setShowForm(true);
   };
 
@@ -143,6 +214,7 @@ export default function MijnAutosScreen() {
       mileage: car.mileage ? String(car.mileage) : '',
     });
     setEditingCarId(car.id);
+    setPhotoUri(car.photo_url || null);
     setShowForm(true);
   };
 
@@ -150,6 +222,7 @@ export default function MijnAutosScreen() {
     setShowForm(false);
     setEditingCarId(null);
     setForm(EMPTY_FORM);
+    setPhotoUri(null);
   };
 
   const handleSave = async () => {
@@ -167,6 +240,7 @@ export default function MijnAutosScreen() {
 
     setSaving(true);
     try {
+      let carId = editingCarId;
       if (editingCarId) {
         await updateCar(editingCarId, {
           brand: form.brand.trim(),
@@ -176,7 +250,7 @@ export default function MijnAutosScreen() {
           mileage: form.mileage ? parseInt(form.mileage, 10) : undefined,
         });
       } else {
-        await createCar({
+        const newCar = await createCar({
           user_id: user.id,
           brand: form.brand.trim(),
           model: form.model.trim(),
@@ -185,6 +259,11 @@ export default function MijnAutosScreen() {
           mileage: form.mileage ? parseInt(form.mileage, 10) : undefined,
           is_default: cars.length === 0,
         });
+        carId = newCar.id;
+      }
+      // Upload photo if a new local photo was picked
+      if (photoUri && carId && !photoUri.startsWith('http')) {
+        await uploadCarPhoto(carId, photoUri);
       }
       closeForm();
       loadCars();
@@ -240,21 +319,61 @@ export default function MijnAutosScreen() {
 
   const renderCar = ({ item }: { item: Car }) => (
     <View style={styles.card}>
-      {/* Top row: icon + info + badge */}
+      {/* Top row: photo/icon + info + badge */}
       <View style={styles.cardTop}>
         <View style={styles.cardTopLeft}>
-          <View
+          <TouchableOpacity
             style={[
               styles.carIconCircle,
-              item.is_default && { backgroundColor: COLORS.secondary + '15' },
+              item.photo_url && styles.carPhotoCircle,
+              !item.photo_url && item.is_default && { backgroundColor: COLORS.secondary + '15' },
             ]}
+            onPress={() => {
+              // Quick upload from the card
+              const doUpload = async (source: 'camera' | 'library') => {
+                const perm = source === 'camera'
+                  ? await ImagePicker.requestCameraPermissionsAsync()
+                  : await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (!perm.granted) {
+                  Alert.alert('Geen toegang', 'Toegang is nodig om een foto te kiezen.');
+                  return;
+                }
+                const launch = source === 'camera'
+                  ? ImagePicker.launchCameraAsync
+                  : ImagePicker.launchImageLibraryAsync;
+                const result = await launch({ allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+                if (!result.canceled) handleUploadPhotoForCar(item.id, result.assets[0].uri);
+              };
+              if (Platform.OS === 'ios') {
+                ActionSheetIOS.showActionSheetWithOptions(
+                  { options: ['Annuleren', 'Maak foto', 'Kies uit galerij'], cancelButtonIndex: 0 },
+                  (idx) => { if (idx === 1) doUpload('camera'); if (idx === 2) doUpload('library'); },
+                );
+              } else {
+                Alert.alert('Foto kiezen', '', [
+                  { text: 'Maak foto', onPress: () => doUpload('camera') },
+                  { text: 'Kies uit galerij', onPress: () => doUpload('library') },
+                  { text: 'Annuleren', style: 'cancel' },
+                ]);
+              }
+            }}
+            activeOpacity={0.7}
           >
-            <MaterialCommunityIcons
-              name="car"
-              size={28}
-              color={item.is_default ? COLORS.secondary : COLORS.textLight}
-            />
-          </View>
+            {uploadingPhoto === item.id ? (
+              <ActivityIndicator size="small" color={COLORS.secondary} />
+            ) : item.photo_url ? (
+              <Image source={{ uri: item.photo_url }} style={styles.carPhoto} />
+            ) : (
+              <MaterialCommunityIcons
+                name="car"
+                size={28}
+                color={item.is_default ? COLORS.secondary : COLORS.textLight}
+              />
+            )}
+            <View style={styles.cameraIconBadge}>
+              <MaterialCommunityIcons name="camera" size={10} color={COLORS.white} />
+            </View>
+          </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={styles.carName}>
               {item.brand} {item.model}
@@ -326,82 +445,7 @@ export default function MijnAutosScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {showForm && (
-        <View style={styles.formContainer}>
-          <Text style={styles.formTitle}>
-            {editingCarId ? 'Auto bewerken' : 'Auto toevoegen'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Merk (bijv. BMW)"
-            placeholderTextColor={COLORS.textLight}
-            value={form.brand}
-            onChangeText={(v) => setForm({ ...form, brand: v })}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Model (bijv. 3 Serie)"
-            placeholderTextColor={COLORS.textLight}
-            value={form.model}
-            onChangeText={(v) => setForm({ ...form, model: v })}
-          />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="Bouwjaar"
-              placeholderTextColor={COLORS.textLight}
-              value={form.year}
-              onChangeText={(v) => setForm({ ...form, year: v })}
-              keyboardType="number-pad"
-              maxLength={4}
-            />
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              placeholder="Kenteken"
-              placeholderTextColor={COLORS.textLight}
-              value={form.license_plate}
-              onChangeText={(v) => setForm({ ...form, license_plate: v })}
-              autoCapitalize="characters"
-            />
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Km-stand (optioneel)"
-            placeholderTextColor={COLORS.textLight}
-            value={form.mileage}
-            onChangeText={(v) => setForm({ ...form, mileage: v })}
-            keyboardType="number-pad"
-          />
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-            <TouchableOpacity
-              style={[styles.formButton, { backgroundColor: COLORS.border }]}
-              onPress={closeForm}
-            >
-              <Text style={{ color: COLORS.text, fontWeight: '600' }}>
-                Annuleren
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.formButton, { backgroundColor: COLORS.secondary }]}
-              onPress={handleSave}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
-              ) : (
-                <Text style={{ color: COLORS.white, fontWeight: '700' }}>
-                  {editingCarId ? 'Opslaan' : 'Toevoegen'}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
+    <View style={styles.container}>
       <FlatList
         data={cars}
         keyExtractor={(item) => item.id}
@@ -429,31 +473,144 @@ export default function MijnAutosScreen() {
             </View>
             <Text style={styles.pageTitle}>Mijn auto's</Text>
 
-            {!showForm && (
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={openAddForm}
-                activeOpacity={0.85}
-              >
-                <MaterialCommunityIcons name="plus" size={20} color={COLORS.white} />
-                <Text style={styles.addButtonText}>Auto toevoegen</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={openAddForm}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="plus" size={20} color={COLORS.white} />
+              <Text style={styles.addButtonText}>Auto toevoegen</Text>
+            </TouchableOpacity>
           </>
         }
         ListEmptyComponent={
-          !showForm ? (
-            <View style={styles.empty}>
-              <MaterialCommunityIcons name="car-outline" size={48} color={COLORS.textLight} />
-              <Text style={styles.emptyText}>Geen auto's opgeslagen</Text>
-              <Text style={styles.emptySubText}>
-                Voeg je auto toe om sneller afspraken te maken.
-              </Text>
-            </View>
-          ) : null
+          <View style={styles.empty}>
+            <MaterialCommunityIcons name="car-outline" size={48} color={COLORS.textLight} />
+            <Text style={styles.emptyText}>Geen auto's opgeslagen</Text>
+            <Text style={styles.emptySubText}>
+              Voeg je auto toe om sneller afspraken te maken.
+            </Text>
+          </View>
         }
       />
-    </KeyboardAvoidingView>
+
+      {/* Add / Edit car modal */}
+      <Modal
+        visible={showForm}
+        animationType="slide"
+        transparent
+        onRequestClose={closeForm}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={closeForm}
+          />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            {/* Drag handle */}
+            <View style={styles.modalHandle} />
+
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {/* Header row */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.formTitle}>
+                  {editingCarId ? 'Auto bewerken' : 'Auto toevoegen'}
+                </Text>
+                <TouchableOpacity onPress={closeForm} activeOpacity={0.7}>
+                  <MaterialCommunityIcons name="close" size={24} color={COLORS.textLight} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Photo picker */}
+              <TouchableOpacity
+                style={styles.photoPickerBtn}
+                onPress={pickCarPhoto}
+                activeOpacity={0.7}
+              >
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <MaterialCommunityIcons name="camera-plus" size={28} color={COLORS.textLight} />
+                    <Text style={styles.photoPlaceholderText}>Foto toevoegen</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TextInput
+                style={styles.input}
+                placeholder="Merk (bijv. BMW)"
+                placeholderTextColor={COLORS.textLight}
+                value={form.brand}
+                onChangeText={(v) => setForm({ ...form, brand: v })}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder="Model (bijv. 3 Serie)"
+                placeholderTextColor={COLORS.textLight}
+                value={form.model}
+                onChangeText={(v) => setForm({ ...form, model: v })}
+              />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Bouwjaar"
+                  placeholderTextColor={COLORS.textLight}
+                  value={form.year}
+                  onChangeText={(v) => setForm({ ...form, year: v })}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                />
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Kenteken"
+                  placeholderTextColor={COLORS.textLight}
+                  value={form.license_plate}
+                  onChangeText={(v) => setForm({ ...form, license_plate: v })}
+                  autoCapitalize="characters"
+                />
+              </View>
+              <TextInput
+                style={styles.input}
+                placeholder="Km-stand (optioneel)"
+                placeholderTextColor={COLORS.textLight}
+                value={form.mileage}
+                onChangeText={(v) => setForm({ ...form, mileage: v })}
+                keyboardType="number-pad"
+              />
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TouchableOpacity
+                  style={[styles.formButton, { backgroundColor: COLORS.border }]}
+                  onPress={closeForm}
+                >
+                  <Text style={{ color: COLORS.text, fontWeight: '600' }}>
+                    Annuleren
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.formButton, { backgroundColor: COLORS.secondary }]}
+                  onPress={handleSave}
+                  disabled={saving}
+                >
+                  {saving ? (
+                    <ActivityIndicator color={COLORS.white} size="small" />
+                  ) : (
+                    <Text style={{ color: COLORS.white, fontWeight: '700' }}>
+                      {editingCarId ? 'Opslaan' : 'Toevoegen'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 }
 
@@ -530,6 +687,57 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  carPhotoCircle: {
+    backgroundColor: COLORS.border,
+  },
+  carPhoto: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  cameraIconBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: COLORS.surface,
+  },
+
+  // Photo picker in form
+  photoPickerBtn: {
+    alignSelf: 'center',
+    marginBottom: 18,
+  },
+  photoPreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.border,
+  },
+  photoPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.background,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPlaceholderText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: COLORS.textLight,
+    marginTop: 4,
   },
 
   // Car info
@@ -640,18 +848,41 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Form
-  formContainer: {
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  modalContent: {
     backgroundColor: COLORS.surface,
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    maxHeight: '85%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
   },
   formTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
     color: COLORS.text,
-    marginBottom: 14,
   },
   input: {
     height: 48,

@@ -5,54 +5,51 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList,
   Dimensions,
+  ScrollView,
+  Animated,
+  PanResponder,
+  Platform,
 } from 'react-native';
 import ClusteredMapView from 'react-native-map-clustering';
 import { Marker, Callout, type Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, AVAILABILITY_COLORS, MAASTRICHT_MAP_REGION } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useGarages } from '../hooks/useGarages';
 import { fetchBookingCountsByDate } from '../services/garageService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const MAP_HEIGHT = SCREEN_HEIGHT * 0.48;
 
-const DAY_NAMES_NL = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
 const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-// Generate next 7 days
-function getNext7Days(): { date: string; label: string; dayKey: string; isToday: boolean }[] {
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    days.push({
-      date: `${yyyy}-${mm}-${dd}`,
-      label: `${DAY_NAMES_NL[d.getDay()]} ${d.getDate()}`,
-      dayKey: DAY_KEYS[d.getDay()],
-      isToday: i === 0,
-    });
-  }
-  return days;
+// Date chip config
+const DATE_CHIPS = [
+  { key: 'today', label: 'Vandaag', offset: 0 },
+  { key: 'tomorrow', label: 'Morgen', offset: 1 },
+  { key: 'next_week', label: 'Volgende week', offset: 7 },
+];
+
+function getDateForOffset(offset: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const dayKey = DAY_KEYS[d.getDay()];
+  return { date: `${yyyy}-${mm}-${dd}`, dayKey };
 }
 
-// Determine pin color based on bookings + open/closed
+// Pin status based on bookings + open/closed
 function getPinStatus(
   garage: any,
   dayKey: string,
   bookingCount: number,
 ): 'closed' | AvailabilityStatus {
-  // Check if closed on this day
   const hours = garage.opening_hours?.[dayKey];
   if (!hours || hours.closed) return 'closed';
-
-  // Dynamic busyness based on booking count
   if (bookingCount >= 6) return 'red';
   if (bookingCount >= 3) return 'orange';
   return 'green';
@@ -62,30 +59,213 @@ const PIN_COLORS: Record<string, string> = {
   green: AVAILABILITY_COLORS.green,
   orange: AVAILABILITY_COLORS.orange,
   red: AVAILABILITY_COLORS.red,
-  closed: '#1A1A2E', // dark/black for closed
+  closed: '#9ca3af',
 };
+
+const STATUS_LABELS: Record<string, string> = {
+  green: 'Beschikbaar',
+  orange: 'Beperkt',
+  red: 'Volgeboekt',
+  closed: 'Gesloten',
+};
+
+// Custom map marker
+function GarageMarker({ status }: { status: string }) {
+  const bgColor = status === 'closed' ? COLORS.textLight : COLORS.primary;
+  const iconName = status === 'closed'
+    ? 'garage-alert'
+    : status === 'red'
+      ? 'car-off'
+      : 'car';
+
+  return (
+    <View style={mkStyles.container}>
+      <View style={[mkStyles.bubble, { backgroundColor: bgColor }]}>
+        <MaterialCommunityIcons name={iconName as any} size={16} color={COLORS.white} />
+      </View>
+      <View style={[mkStyles.arrow, { borderTopColor: bgColor }]} />
+    </View>
+  );
+}
+
+const mkStyles = StyleSheet.create({
+  container: { alignItems: 'center' },
+  bubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: COLORS.white,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  arrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightWidth: 6,
+    borderRightColor: 'transparent',
+    borderTopWidth: 8,
+    marginTop: -2,
+  },
+});
+
+// ============================================
+// BOTTOM SHEET (built with Animated + PanResponder)
+// ============================================
+
+function DraggableBottomSheet({
+  children,
+  peekHeight,
+  midHeight,
+  fullHeight,
+}: {
+  children: React.ReactNode;
+  peekHeight: number;
+  midHeight: number;
+  fullHeight: number;
+}) {
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT - peekHeight)).current;
+  const lastSnap = useRef(SCREEN_HEIGHT - peekHeight);
+  const snapPoints = [SCREEN_HEIGHT - fullHeight, SCREEN_HEIGHT - midHeight, SCREEN_HEIGHT - peekHeight];
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => {
+        return Math.abs(gesture.dy) > 8;
+      },
+      onPanResponderGrant: () => {
+        translateY.setOffset(lastSnap.current);
+        translateY.setValue(0);
+      },
+      onPanResponderMove: Animated.event(
+        [null, { dy: translateY }],
+        { useNativeDriver: false }
+      ),
+      onPanResponderRelease: (_, gesture) => {
+        translateY.flattenOffset();
+        const currentY = lastSnap.current + gesture.dy;
+
+        // Find closest snap point
+        let closest = snapPoints[0];
+        let minDist = Infinity;
+        for (const sp of snapPoints) {
+          const dist = Math.abs(currentY - sp);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = sp;
+          }
+        }
+
+        // If flinging, go in fling direction
+        if (Math.abs(gesture.vy) > 0.5) {
+          if (gesture.vy > 0) {
+            // Fling down — find next snap below current
+            closest = snapPoints.find((sp) => sp > currentY) || snapPoints[snapPoints.length - 1];
+          } else {
+            // Fling up — find next snap above current
+            closest = [...snapPoints].reverse().find((sp) => sp < currentY) || snapPoints[0];
+          }
+        }
+
+        lastSnap.current = closest;
+        Animated.spring(translateY, {
+          toValue: closest,
+          useNativeDriver: false,
+          tension: 80,
+          friction: 12,
+        }).start();
+      },
+    })
+  ).current;
+
+  return (
+    <Animated.View
+      style={[
+        sheetStyles.container,
+        { transform: [{ translateY }] },
+      ]}
+    >
+      {/* Draggable handle area */}
+      <View {...panResponder.panHandlers}>
+        <View style={sheetStyles.handleArea}>
+          <View style={sheetStyles.handle} />
+        </View>
+      </View>
+      {children}
+    </Animated.View>
+  );
+}
+
+const sheetStyles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: SCREEN_HEIGHT,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  handleArea: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.border,
+  },
+});
+
+// ============================================
+// MAIN SCREEN
+// ============================================
 
 export default function MapScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { garages, loading } = useGarages();
   const [region, setRegion] = useState<Region>(MAASTRICHT_MAP_REGION);
   const mapRef = useRef<any>(null);
 
-  const days = useMemo(() => getNext7Days(), []);
-  const [selectedDate, setSelectedDate] = useState(days[0]);
+  const [selectedChip, setSelectedChip] = useState('today');
+  const [selectedGarageId, setSelectedGarageId] = useState<string | null>(null);
   const [bookingCounts, setBookingCounts] = useState<Record<string, number>>({});
+
+  const selectedDateInfo = useMemo(() => {
+    const chip = DATE_CHIPS.find((c) => c.key === selectedChip);
+    return getDateForOffset(chip?.offset || 0);
+  }, [selectedChip]);
 
   // Fetch booking counts when date changes
   useEffect(() => {
     let cancelled = false;
-    fetchBookingCountsByDate(selectedDate.date)
+    fetchBookingCountsByDate(selectedDateInfo.date)
       .then((counts) => { if (!cancelled) setBookingCounts(counts); })
       .catch((err) => {
         console.error('Failed to load booking counts:', err);
         if (!cancelled) setBookingCounts({});
       });
     return () => { cancelled = true; };
-  }, [selectedDate.date]);
+  }, [selectedDateInfo.date]);
+
+  // Bottom sheet snap heights
+  const peekHeight = 280;
+  const midHeight = SCREEN_HEIGHT * 0.55;
+  const fullHeight = SCREEN_HEIGHT - insets.top - 60;
 
   // Filter garages visible in current map region
   const visibleGarages = useMemo(() => {
@@ -107,78 +287,33 @@ export default function MapScreen() {
     setRegion(newRegion);
   }, []);
 
-  const handleGaragePress = useCallback((garageId: string) => {
+  const getGarageStatus = useCallback((garage: any) => {
+    return getPinStatus(garage, selectedDateInfo.dayKey, bookingCounts[garage.id] || 0);
+  }, [selectedDateInfo.dayKey, bookingCounts]);
+
+  const handleMarkerPress = useCallback((garageId: string) => {
+    setSelectedGarageId(garageId);
+  }, []);
+
+  const handleGarageCardPress = useCallback((garageId: string) => {
     navigation.navigate('GarageDetail', { garageId });
   }, [navigation]);
 
-  const getGarageStatus = useCallback((garage: any) => {
-    return getPinStatus(garage, selectedDate.dayKey, bookingCounts[garage.id] || 0);
-  }, [selectedDate.dayKey, bookingCounts]);
-
-  const getStatusLabel = (status: string) => {
-    if (status === 'closed') return 'Gesloten';
-    if (status === 'red') return 'Vol';
-    if (status === 'orange') return 'Beperkt';
-    return 'Beschikbaar';
-  };
-
-  const renderGarageCard = ({ item: garage }: { item: any }) => {
-    const status = getGarageStatus(garage);
-    return (
-      <TouchableOpacity
-        style={[styles.garageCard, status === 'closed' && styles.garageCardClosed]}
-        onPress={() => handleGaragePress(garage.id)}
-      >
-        <View style={[styles.cardDot, { backgroundColor: PIN_COLORS[status] }]} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.cardName, status === 'closed' && styles.closedText]}>{garage.name}</Text>
-          <Text style={styles.cardCity}>{garage.city}</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <MaterialCommunityIcons name="star" size={14} color={COLORS.star} />
-            <Text style={styles.cardRating}>{(garage.average_rating || 0).toFixed(1)}</Text>
-          </View>
-          <Text style={[styles.statusLabel, { color: PIN_COLORS[status] }]}>
-            {getStatusLabel(status)}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const handleMyLocation = useCallback(() => {
+    mapRef.current?.animateToRegion(MAASTRICHT_MAP_REGION, 500);
+  }, []);
 
   return (
     <View style={styles.container}>
-      {/* Date selector */}
-      <View style={styles.dateStrip}>
-        {days.map((day) => (
-          <TouchableOpacity
-            key={day.date}
-            style={[
-              styles.dateChip,
-              selectedDate.date === day.date && styles.dateChipActive,
-            ]}
-            onPress={() => setSelectedDate(day)}
-          >
-            <Text style={[
-              styles.dateChipText,
-              selectedDate.date === day.date && styles.dateChipTextActive,
-            ]}>
-              {day.isToday ? 'Vandaag' : day.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Map */}
+      {/* Full-screen Map */}
       {loading ? (
-        <View style={[styles.mapPlaceholder, { height: MAP_HEIGHT }]}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+        <View style={styles.mapLoading}>
+          <ActivityIndicator size="large" color={COLORS.secondary} />
           <Text style={styles.loadingText}>Kaart laden...</Text>
         </View>
       ) : (
         <ClusteredMapView
-          style={{ height: MAP_HEIGHT }}
+          style={StyleSheet.absoluteFillObject}
           initialRegion={MAASTRICHT_MAP_REGION}
           onRegionChangeComplete={handleRegionChangeComplete}
           clusterColor={COLORS.primary}
@@ -186,10 +321,12 @@ export default function MapScreen() {
           radius={40}
           mapRef={(ref: any) => { mapRef.current = ref; }}
           showsUserLocation
-          showsMyLocationButton
+          showsMyLocationButton={false}
+          mapPadding={{ top: insets.top + 140, right: 0, bottom: 300, left: 0 }}
         >
           {garages.map((garage) => {
             const status = getGarageStatus(garage);
+            const isSelected = garage.id === selectedGarageId;
             return (
               <Marker
                 key={garage.id}
@@ -198,21 +335,24 @@ export default function MapScreen() {
                   latitude: garage.latitude,
                   longitude: garage.longitude,
                 }}
-                pinColor={PIN_COLORS[status]}
+                onPress={() => handleMarkerPress(garage.id)}
+                tracksViewChanges={false}
               >
-                <Callout onPress={() => handleGaragePress(garage.id)}>
+                <View style={isSelected ? { transform: [{ scale: 1.2 }] } : undefined}>
+                  <GarageMarker status={status} />
+                </View>
+                <Callout onPress={() => handleGarageCardPress(garage.id)}>
                   <View style={styles.callout}>
                     <Text style={styles.calloutName}>{garage.name}</Text>
                     <Text style={styles.calloutCity}>{garage.city}</Text>
                     <View style={styles.calloutRow}>
-                      <Text style={styles.calloutRating}>★ {(garage.average_rating || 0).toFixed(1)}</Text>
+                      <Text style={styles.calloutRating}>
+                        ★ {(garage.average_rating || 0).toFixed(1)}
+                      </Text>
                       <Text style={[styles.calloutStatus, { color: PIN_COLORS[status] }]}>
-                        {getStatusLabel(status)}
+                        {STATUS_LABELS[status]}
                       </Text>
                     </View>
-                    {status !== 'closed' && (
-                      <Text style={styles.calloutHint}>Tik voor details →</Text>
-                    )}
                   </View>
                 </Callout>
               </Marker>
@@ -221,86 +361,186 @@ export default function MapScreen() {
         </ClusteredMapView>
       )}
 
-      {/* Legend */}
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: PIN_COLORS.green }]} />
-          <Text style={styles.legendText}>Plek</Text>
+      {/* Floating Header */}
+      <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
+        <View style={styles.headerBar}>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={24} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Kaart</Text>
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={() => navigation.navigate('Search')}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="magnify" size={22} color={COLORS.textSecondary} />
+          </TouchableOpacity>
         </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: PIN_COLORS.orange }]} />
-          <Text style={styles.legendText}>Beperkt</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: PIN_COLORS.red }]} />
-          <Text style={styles.legendText}>Vol</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: PIN_COLORS.closed }]} />
-          <Text style={styles.legendText}>Dicht</Text>
-        </View>
+
+        {/* Date filter chips */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipScrollContent}
+        >
+          {DATE_CHIPS.map((chip) => {
+            const isActive = selectedChip === chip.key;
+            return (
+              <TouchableOpacity
+                key={chip.key}
+                style={[styles.dateChip, isActive && styles.dateChipActive]}
+                onPress={() => setSelectedChip(chip.key)}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dateChipText, isActive && styles.dateChipTextActive]}>
+                  {chip.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      {/* Garage list */}
-      <View style={styles.listContainer}>
-        <View style={styles.dragHandle} />
-        <Text style={styles.listHeader}>
-          {visibleGarages.length} garage{visibleGarages.length !== 1 ? 's' : ''} in beeld
-        </Text>
-        <FlatList
-          data={visibleGarages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
-          renderItem={renderGarageCard}
-          ListEmptyComponent={
-            <View style={styles.emptyList}>
-              <MaterialCommunityIcons name="map-search" size={32} color={COLORS.textLight} />
+      {/* Map controls (right side) */}
+      <View style={[styles.mapControls, { bottom: peekHeight + 20 }]}>
+        <TouchableOpacity
+          style={styles.mapControlBtn}
+          onPress={handleMyLocation}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="crosshairs-gps" size={22} color={COLORS.textSecondary} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Draggable Bottom Sheet */}
+      <DraggableBottomSheet
+        peekHeight={peekHeight}
+        midHeight={midHeight}
+        fullHeight={fullHeight}
+      >
+        {/* Sheet header */}
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>Dichtbij in de buurt</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Search')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.sheetShowAll}>Toon alles</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Garage cards */}
+        <ScrollView
+          contentContainerStyle={styles.sheetList}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled
+        >
+          {visibleGarages.length > 0 ? (
+            visibleGarages.map((garage) => {
+              const status = getGarageStatus(garage);
+              const isSelected = garage.id === selectedGarageId;
+              const isClosed = status === 'closed';
+
+              return (
+                <TouchableOpacity
+                  key={garage.id}
+                  style={[
+                    styles.garageCard,
+                    isSelected && styles.garageCardSelected,
+                    isClosed && styles.garageCardClosed,
+                  ]}
+                  onPress={() => handleGarageCardPress(garage.id)}
+                  activeOpacity={0.95}
+                >
+                  <View style={styles.cardRow}>
+                    {/* Image placeholder */}
+                    <View style={styles.cardImage}>
+                      <MaterialCommunityIcons
+                        name="garage"
+                        size={28}
+                        color={isClosed ? COLORS.textLight : COLORS.primary}
+                      />
+                      {!isClosed && (
+                        <View style={[
+                          styles.availDot,
+                          { backgroundColor: PIN_COLORS[status] },
+                        ]} />
+                      )}
+                    </View>
+
+                    {/* Info */}
+                    <View style={styles.cardInfo}>
+                      <Text style={[styles.cardName, isClosed && styles.closedText]}>
+                        {garage.name}
+                      </Text>
+                      <View style={styles.ratingRow}>
+                        <MaterialCommunityIcons name="star" size={14} color={COLORS.star} />
+                        <Text style={styles.ratingText}>
+                          {(garage.average_rating || 0).toFixed(1)}
+                        </Text>
+                        <Text style={styles.reviewCount}>
+                          ({garage.total_reviews || 0})
+                        </Text>
+                      </View>
+                      <View style={[
+                        styles.statusBadge,
+                        { backgroundColor: (PIN_COLORS[status] || COLORS.textLight) + '15' },
+                      ]}>
+                        <Text style={[
+                          styles.statusText,
+                          { color: PIN_COLORS[status] || COLORS.textLight },
+                        ]}>
+                          {STATUS_LABELS[status]}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Plan afspraak button */}
+                  {!isClosed && (
+                    <TouchableOpacity
+                      style={styles.planBtn}
+                      onPress={() => handleGarageCardPress(garage.id)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.planBtnText}>Plan afspraak</Text>
+                    </TouchableOpacity>
+                  )}
+                </TouchableOpacity>
+              );
+            })
+          ) : (
+            <View style={styles.emptySheet}>
+              <MaterialCommunityIcons name="map-search-outline" size={36} color={COLORS.textLight} />
               <Text style={styles.emptyText}>Geen garages in dit gebied</Text>
               <Text style={styles.emptySubtext}>Zoom uit of verschuif de kaart</Text>
             </View>
-          }
-        />
-      </View>
+          )}
+          <View style={{ height: 120 }} />
+        </ScrollView>
+      </DraggableBottomSheet>
     </View>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  // Date selector
-  dateStrip: {
-    flexDirection: 'row',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 6,
-  },
-  dateChip: {
+
+  // Map loading
+  mapLoading: {
     flex: 1,
-    paddingVertical: 7,
-    borderRadius: 10,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-  },
-  dateChipActive: {
-    backgroundColor: COLORS.primary,
-  },
-  dateChipText: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: COLORS.textSecondary,
-  },
-  dateChipTextActive: {
-    color: COLORS.white,
-    fontWeight: '700' as const,
-  },
-  // Map
-  mapPlaceholder: {
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.border,
@@ -308,7 +548,106 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 12,
     color: COLORS.textSecondary,
+    fontSize: 14,
   },
+
+  // Floating header
+  floatingHeader: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    zIndex: 10,
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    borderRadius: 18,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+
+  // Date chips
+  chipScroll: {
+    marginTop: 12,
+    flexGrow: 0,
+  },
+  chipScrollContent: {
+    gap: 8,
+  },
+  dateChip: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.04)',
+  },
+  dateChipActive: {
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
+    shadowColor: COLORS.secondary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  dateChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  dateChipTextActive: {
+    color: COLORS.white,
+    fontWeight: '700',
+  },
+
+  // Map controls
+  mapControls: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 10,
+  },
+  mapControlBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+
   // Callout
   callout: {
     minWidth: 150,
@@ -316,7 +655,7 @@ const styles = StyleSheet.create({
   },
   calloutName: {
     fontSize: 15,
-    fontWeight: '700' as const,
+    fontWeight: '700',
     color: COLORS.text,
   },
   calloutCity: {
@@ -332,126 +671,154 @@ const styles = StyleSheet.create({
   },
   calloutRating: {
     fontSize: 14,
-    fontWeight: '600' as const,
+    fontWeight: '600',
     color: COLORS.star,
   },
   calloutStatus: {
     fontSize: 12,
-    fontWeight: '600' as const,
+    fontWeight: '600',
   },
-  calloutHint: {
-    fontSize: 11,
-    color: COLORS.textLight,
-    marginTop: 4,
-  },
-  // Legend
-  legend: {
+
+  // Sheet header
+  sheetHeader: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: 16,
-  },
-  legendItem: {
-    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 12,
   },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 4,
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: COLORS.text,
   },
-  legendText: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: '500' as const,
-  },
-  // List
-  listContainer: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: -10,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  dragHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.border,
-    alignSelf: 'center',
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  listHeader: {
+  sheetShowAll: {
     fontSize: 14,
-    fontWeight: '600' as const,
-    color: COLORS.textSecondary,
-    paddingHorizontal: 16,
-    paddingTop: 6,
-    paddingBottom: 8,
+    fontWeight: '600',
+    color: COLORS.secondary,
   },
+
+  // Sheet list
+  sheetList: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    gap: 14,
+  },
+
+  // Garage card
   garageCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: COLORS.background,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  garageCardSelected: {
+    borderColor: COLORS.secondary + '40',
+    borderWidth: 2,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   garageCardClosed: {
     opacity: 0.55,
   },
-  cardDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: 12,
+  cardRow: {
+    flexDirection: 'row',
+    gap: 14,
+  },
+  cardImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
+    backgroundColor: COLORS.primary + '08',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  availDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: COLORS.background,
+  },
+  cardInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 4,
   },
   cardName: {
-    fontSize: 15,
-    fontWeight: '600' as const,
+    fontSize: 16,
+    fontWeight: '700',
     color: COLORS.text,
   },
   closedText: {
     color: COLORS.textSecondary,
   },
-  cardCity: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  cardRating: {
+  ratingText: {
     fontSize: 14,
-    fontWeight: '600' as const,
+    fontWeight: '700',
     color: COLORS.text,
   },
-  statusLabel: {
-    fontSize: 11,
-    fontWeight: '600' as const,
-    marginTop: 2,
+  reviewCount: {
+    fontSize: 12,
+    color: COLORS.textLight,
   },
-  emptyList: {
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // Plan button
+  planBtn: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 999,
+    paddingVertical: 12,
     alignItems: 'center',
-    paddingVertical: 32,
+    marginTop: 12,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  planBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.white,
+  },
+
+  // Empty
+  emptySheet: {
+    alignItems: 'center',
+    paddingVertical: 40,
   },
   emptyText: {
     color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 10,
   },
   emptySubtext: {
     color: COLORS.textLight,
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 4,
   },
 });

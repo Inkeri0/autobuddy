@@ -176,6 +176,7 @@ export interface Car {
   year: number;
   license_plate: string;
   mileage?: number;
+  photo_url?: string;
   is_default: boolean;
   created_at: string;
   updated_at?: string;

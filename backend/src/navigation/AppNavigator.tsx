@@ -142,7 +142,7 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Map"
               component={MapScreen}
-              options={{ title: 'Kaart' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="GarageDetail"
@@ -187,7 +187,7 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Onderhoudshistorie"
               component={OnderhoudshistorieScreen}
-              options={{ title: 'Onderhoudshistorie' }}
+              options={{ headerShown: false }}
             />
           </>
         )}
