@@ -10,10 +10,11 @@ import {
   Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { COLORS, SERVICE_LABELS, AVAILABILITY_COLORS } from '../constants';
-import { AvailabilityStatus, ServiceCategory, BookingStatus } from '../types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLORS, SERVICE_LABELS } from '../constants';
+import { ServiceCategory, BookingStatus } from '../types';
 import { fetchBookingById, cancelBooking } from '../services/garageService';
-import StarDisplay from '../components/StarDisplay';
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: 'In afwachting',
@@ -25,7 +26,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
 };
 
 const STATUS_COLORS: Record<BookingStatus, string> = {
-  pending: COLORS.warning,
+  pending: COLORS.secondary,
   confirmed: COLORS.success,
   in_progress: COLORS.primary,
   completed: COLORS.textSecondary,
@@ -33,19 +34,77 @@ const STATUS_COLORS: Record<BookingStatus, string> = {
   no_show: COLORS.danger,
 };
 
+const STATUS_ICONS: Record<BookingStatus, string> = {
+  pending: 'clock-outline',
+  confirmed: 'check-circle',
+  in_progress: 'progress-wrench',
+  completed: 'check-circle-outline',
+  cancelled: 'close-circle-outline',
+  no_show: 'account-alert-outline',
+};
+
 function formatDateNL(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('nl-NL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
+  const months = [
+    'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec',
+  ];
+  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}, ${date.getFullYear()}`;
 }
+
+/* Dutch license plate inline component */
+function LicensePlate({ plate }: { plate: string }) {
+  return (
+    <View style={plateStyles.wrapper}>
+      <View style={plateStyles.blueStrip}>
+        <Text style={plateStyles.nlText}>NL</Text>
+      </View>
+      <View style={plateStyles.yellowBg}>
+        <Text style={plateStyles.plateText}>{plate}</Text>
+      </View>
+    </View>
+  );
+}
+
+const plateStyles = StyleSheet.create({
+  wrapper: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    height: 32,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#1a1a2e',
+    overflow: 'hidden',
+  },
+  blueStrip: {
+    width: 20,
+    backgroundColor: '#003DA5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nlText: {
+    color: '#FFFFFF',
+    fontSize: 7,
+    fontWeight: '800',
+  },
+  yellowBg: {
+    backgroundColor: '#FFCC00',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+  },
+  plateText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#1a1a2e',
+    letterSpacing: 1.5,
+  },
+});
 
 export default function AfspraakDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { bookingId } = route.params;
 
   const [booking, setBooking] = useState<any>(null);
@@ -108,287 +167,552 @@ export default function AfspraakDetailScreen() {
   const canCancel = status === 'pending' || status === 'confirmed';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Status banner */}
-      <View style={[styles.statusBanner, { backgroundColor: STATUS_COLORS[status] + '15' }]}>
-        <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[status] }]} />
-        <Text style={[styles.statusLabel, { color: STATUS_COLORS[status] }]}>
-          {STATUS_LABELS[status]}
-        </Text>
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Afspraak details</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Appointment details */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Afspraak</Text>
-        <View style={styles.row}>
-          <Text style={styles.label}>Datum</Text>
-          <Text style={styles.value}>{formatDateNL(booking.date)}</Text>
-        </View>
-        <View style={styles.row}>
-          <Text style={styles.label}>Tijd</Text>
-          <Text style={styles.value}>{booking.time_slot}</Text>
-        </View>
-        {booking.notes && (
-          <View style={styles.row}>
-            <Text style={styles.label}>Opmerkingen</Text>
-            <Text style={[styles.value, { flex: 1, textAlign: 'right' }]}>
-              {booking.notes}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* 1. Status banner */}
+        <View style={styles.statusCard}>
+          <View>
+            <Text style={styles.statusLabel}>STATUS</Text>
+            <Text style={styles.statusValue}>Ingepland</Text>
+          </View>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: STATUS_COLORS[status] + '15' },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name={STATUS_ICONS[status] as any}
+              size={16}
+              color={STATUS_COLORS[status]}
+            />
+            <Text style={[styles.statusBadgeText, { color: STATUS_COLORS[status] }]}>
+              {STATUS_LABELS[status]}
             </Text>
           </View>
-        )}
-      </View>
+        </View>
 
-      {/* Service details */}
-      {service && (
+        {/* 2. Date & Time card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Service</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Type</Text>
-            <Text style={styles.value}>{service.name}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Categorie</Text>
-            <Text style={styles.value}>
-              {SERVICE_LABELS[service.category as ServiceCategory] || service.category}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Prijsindicatie</Text>
-            <Text style={[styles.value, { color: COLORS.primary, fontWeight: '700' }]}>
-              €{service.price_from} – €{service.price_to}
-            </Text>
-          </View>
-          {service.duration_minutes && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Geschatte duur</Text>
-              <Text style={styles.value}>ca. {service.duration_minutes} min</Text>
+          <View style={styles.dateTimeTop}>
+            <View style={styles.dateIconCircle}>
+              <MaterialCommunityIcons
+                name="calendar-blank-outline"
+                size={22}
+                color={COLORS.secondary}
+              />
             </View>
-          )}
-          {service.description && (
-            <View style={[styles.row, { flexDirection: 'column', alignItems: 'flex-start' }]}>
-              <Text style={[styles.label, { marginBottom: 4 }]}>Beschrijving</Text>
-              <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20 }}>
-                {service.description}
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Car details */}
-      {booking.car_brand && (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Auto</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Voertuig</Text>
-            <Text style={styles.value}>
-              {booking.car_brand} {booking.car_model}
-              {booking.car_year ? ` (${booking.car_year})` : ''}
-            </Text>
-          </View>
-          {booking.car_license_plate && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Kenteken</Text>
-              <Text style={styles.value}>{booking.car_license_plate}</Text>
-            </View>
-          )}
-          {booking.car_mileage && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Km-stand</Text>
-              <Text style={styles.value}>
-                {booking.car_mileage.toLocaleString()} km
-              </Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Garage details */}
-      {garage && (
-        <View style={styles.card}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={styles.cardTitle}>Garage</Text>
-            <View style={styles.availabilityBadge}>
-              <View style={[
-                styles.availabilityDot,
-                { backgroundColor: AVAILABILITY_COLORS[garage.availability_status as AvailabilityStatus] || COLORS.success },
-              ]} />
-              <Text style={styles.availabilityText}>
-                {garage.availability_status === 'green' ? 'Veel plek' :
-                 garage.availability_status === 'orange' ? 'Beperkt' : 'Vol vandaag'}
-              </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateLabel}>Datum & Tijd</Text>
+              <Text style={styles.dateValue}>{formatDateNL(booking.date)}</Text>
+              <Text style={styles.timeValue}>{booking.time_slot} uur</Text>
             </View>
           </View>
 
-          <Text style={styles.garageName}>{garage.name}</Text>
-
-          {garage.average_rating > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-              <StarDisplay rating={garage.average_rating} size={14} />
-              <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginLeft: 6 }}>
-                {garage.average_rating.toFixed(1)} ({garage.total_reviews} reviews)
-              </Text>
-            </View>
-          )}
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.label}>Adres</Text>
-            <Text style={[styles.value, { flex: 1, textAlign: 'right' }]}>
-              {garage.address}, {garage.postal_code} {garage.city}
-            </Text>
-          </View>
-
-          {garage.phone && (
-            <View style={styles.row}>
-              <Text style={styles.label}>Telefoon</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(`tel:${garage.phone}`)}>
-                <Text style={[styles.value, { color: COLORS.secondary }]}>{garage.phone}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {garage.email && (
-            <View style={styles.row}>
-              <Text style={styles.label}>E-mail</Text>
-              <TouchableOpacity onPress={() => Linking.openURL(`mailto:${garage.email}`)}>
-                <Text style={[styles.value, { color: COLORS.secondary }]}>{garage.email}</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {garage.brands_serviced?.length > 0 && (
+          {booking.notes && (
             <>
-              <View style={styles.divider} />
-              <Text style={[styles.label, { marginBottom: 8 }]}>Merken</Text>
-              <View style={styles.tagRow}>
-                {garage.brands_serviced.map((brand: string) => (
-                  <View key={brand} style={styles.tag}>
-                    <Text style={styles.tagText}>{brand}</Text>
-                  </View>
-                ))}
-                {garage.is_ev_specialist && (
-                  <View style={[styles.tag, { backgroundColor: '#ECFDF5' }]}>
-                    <Text style={[styles.tagText, { color: COLORS.success }]}>EV</Text>
-                  </View>
-                )}
+              <View style={styles.cardDivider} />
+              <View>
+                <Text style={styles.notesLabel}>Mijn opmerkingen</Text>
+                <Text style={styles.notesText}>"{booking.notes}"</Text>
               </View>
             </>
           )}
+        </View>
 
+        {/* 3. Service card */}
+        {service && (
+          <View style={styles.card}>
+            <View style={styles.serviceTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.serviceLabel}>Service</Text>
+                <Text style={styles.serviceName}>{service.name}</Text>
+              </View>
+              {(service.price_from || service.price_to) && (
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.priceLabel}>SCHATTING</Text>
+                  <Text style={styles.priceValue}>
+                    {'\u20AC'}{service.price_from} - {'\u20AC'}{service.price_to}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {service.description && (
+              <Text style={styles.serviceDescription}>{service.description}</Text>
+            )}
+          </View>
+        )}
+
+        {/* 4. Car info card */}
+        {booking.car_brand && (
+          <View style={styles.card}>
+            <View style={styles.carRow}>
+              <View style={styles.carImagePlaceholder}>
+                <MaterialCommunityIcons name="car-side" size={28} color={COLORS.textLight} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.carLabel}>UW VOERTUIG</Text>
+                <Text style={styles.carName}>
+                  {booking.car_brand} {booking.car_model}
+                </Text>
+              </View>
+              {booking.car_license_plate && (
+                <LicensePlate plate={booking.car_license_plate} />
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* 5. Garage info card */}
+        {garage && (
+          <View style={styles.card}>
+            <View style={styles.garageTop}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.garageName}>{garage.name}</Text>
+                <View style={styles.garageAddressRow}>
+                  <MaterialCommunityIcons
+                    name="map-marker"
+                    size={14}
+                    color={COLORS.textSecondary}
+                  />
+                  <Text style={styles.garageAddress}>
+                    {garage.address}, {garage.postal_code} {garage.city}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.garageMapBtn}
+                onPress={() =>
+                  navigation.navigate('GarageDetail', { garageId: garage.id })
+                }
+                activeOpacity={0.7}
+              >
+                <MaterialCommunityIcons
+                  name="map-marker"
+                  size={24}
+                  color={COLORS.secondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.garageActions}>
+              {garage.phone && (
+                <TouchableOpacity
+                  style={styles.garageActionBtn}
+                  onPress={() => Linking.openURL(`tel:${garage.phone}`)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="phone" size={18} color={COLORS.secondary} />
+                  <Text style={styles.garageActionText}>Bellen</Text>
+                </TouchableOpacity>
+              )}
+              {garage.email && (
+                <TouchableOpacity
+                  style={styles.garageActionBtn}
+                  onPress={() => Linking.openURL(`mailto:${garage.email}`)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="email-outline" size={18} color={COLORS.secondary} />
+                  <Text style={styles.garageActionText}>E-mail</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* 6. Garage notes */}
+        {booking.garage_notes && (
+          <View style={styles.garageNotesCard}>
+            <View style={styles.garageNotesHeader}>
+              <MaterialCommunityIcons
+                name="information"
+                size={20}
+                color={COLORS.secondary}
+              />
+              <Text style={styles.garageNotesTitle}>Garage opmerkingen</Text>
+            </View>
+            <Text style={styles.garageNotesText}>{booking.garage_notes}</Text>
+          </View>
+        )}
+
+        {/* 7. Review button for completed */}
+        {status === 'completed' && (
           <TouchableOpacity
-            style={styles.garageButton}
-            onPress={() => navigation.navigate('GarageDetail', { garageId: garage.id })}
+            style={styles.reviewButton}
+            onPress={() => navigation.navigate('Review', { bookingId })}
+            activeOpacity={0.85}
           >
-            <Text style={styles.garageButtonText}>Bekijk garage</Text>
+            <MaterialCommunityIcons name="star-outline" size={18} color={COLORS.white} />
+            <Text style={styles.reviewButtonText}>Beoordeel deze afspraak</Text>
           </TouchableOpacity>
-        </View>
-      )}
+        )}
 
-      {/* Garage notes */}
-      {booking.garage_notes && (
-        <View style={[styles.card, { backgroundColor: '#FFFBEB' }]}>
-          <Text style={[styles.cardTitle, { color: COLORS.warning }]}>Notities van de garage</Text>
-          <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20 }}>
-            {booking.garage_notes}
-          </Text>
-        </View>
-      )}
-
-      {/* Actions */}
-      {status === 'completed' && (
-        <TouchableOpacity
-          style={styles.reviewButton}
-          onPress={() => navigation.navigate('Review', { bookingId })}
-        >
-          <Text style={styles.reviewButtonText}>Beoordeel deze afspraak</Text>
-        </TouchableOpacity>
-      )}
-
-      {canCancel && (
-        <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-          <Text style={styles.cancelText}>Afspraak annuleren</Text>
-        </TouchableOpacity>
-      )}
-    </ScrollView>
+        {/* 8. Cancel button */}
+        {canCancel && (
+          <View style={styles.cancelSection}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons
+                name="close-circle-outline"
+                size={20}
+                color={COLORS.danger}
+              />
+              <Text style={styles.cancelText}>Afspraak annuleren</Text>
+            </TouchableOpacity>
+            <Text style={styles.cancelHint}>
+              Kosteloos annuleren is mogelijk tot 24 uur voor aanvang.
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, paddingBottom: 40 },
-  statusBanner: {
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // Header
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    backgroundColor: COLORS.background,
   },
-  statusDot: { width: 10, height: 10, borderRadius: 5, marginRight: 10 },
-  statusLabel: { fontSize: 16, fontWeight: '700' },
-  card: {
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-  row: {
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+
+  // Scroll
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  // Status card
+  statusCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  label: { fontSize: 14, color: COLORS.textSecondary },
-  value: { fontSize: 14, fontWeight: '500', color: COLORS.text },
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
-  garageName: { fontSize: 18, fontWeight: '700', color: COLORS.text },
-  availabilityBadge: {
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  statusValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 5,
+  },
+  statusBadgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  // Generic card
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  cardDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 16,
+  },
+
+  // Date & Time
+  dateTimeTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+  },
+  dateIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.secondary + '12',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dateLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  dateValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  timeValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.secondary,
+    marginTop: 2,
+  },
+  notesLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+
+  // Service
+  serviceTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  serviceLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
+  serviceName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  priceLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textLight,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  priceValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    lineHeight: 21,
+  },
+
+  // Car info
+  carRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  carImagePlaceholder: {
+    width: 60,
+    height: 44,
+    borderRadius: 8,
     backgroundColor: COLORS.background,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  availabilityDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  availabilityText: { fontSize: 12, fontWeight: '500', color: COLORS.textSecondary },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: { backgroundColor: COLORS.background, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText: { fontSize: 12, color: COLORS.textSecondary, fontWeight: '500' },
-  garageButton: {
-    marginTop: 14,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: COLORS.primary,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  garageButtonText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
-  reviewButton: {
+  carLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  carName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginTop: 2,
+  },
+
+  // Garage info
+  garageTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  garageName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  garageAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: COLORS.secondary,
+    gap: 4,
+  },
+  garageAddress: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  garageMapBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: COLORS.secondary + '12',
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  garageActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  garageActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.secondary + '12',
+    borderRadius: 14,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  garageActionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.secondary,
+  },
+
+  // Garage notes
+  garageNotesCard: {
+    backgroundColor: COLORS.secondary + '10',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 14,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.secondary,
+  },
+  garageNotesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 8,
   },
-  reviewButtonText: { color: COLORS.white, fontSize: 15, fontWeight: '700' },
-  cancelButton: {
-    marginTop: 4,
-    padding: 14,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: COLORS.danger,
-    alignItems: 'center',
+  garageNotesTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.secondary,
   },
-  cancelText: { color: COLORS.danger, fontSize: 15, fontWeight: '600' },
+  garageNotesText: {
+    fontSize: 14,
+    color: COLORS.text,
+    lineHeight: 20,
+  },
+
+  // Review button
+  reviewButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    marginBottom: 14,
+    gap: 8,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  reviewButtonText: {
+    color: COLORS.white,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Cancel section
+  cancelSection: {
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderWidth: 2,
+    borderColor: COLORS.danger + '25',
+    borderRadius: 16,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  cancelText: {
+    color: COLORS.danger,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  cancelHint: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
 });

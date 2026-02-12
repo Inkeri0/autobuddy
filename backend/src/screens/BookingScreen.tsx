@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import { fetchGarageById, createBooking } from '../services/garageService';
@@ -116,7 +117,7 @@ export default function BookingScreen() {
 
       const service = services.find((s) => s.id === selectedService);
       Alert.alert(
-        'Afspraak bevestigd! ✓',
+        'Afspraak bevestigd!',
         `${service?.name} bij ${garage.name}\n${selectedDate} om ${selectedTime}\n\nJe ontvangt een bevestiging per e-mail.`,
         [{ text: 'OK', onPress: () => navigation.navigate('Home') }]
       );
@@ -137,7 +138,7 @@ export default function BookingScreen() {
         {services.map((service) => (
           <TouchableOpacity key={service.id} style={[styles.serviceChip, selectedService === service.id && styles.chipActive]} onPress={() => setSelectedService(service.id)}>
             <Text style={[styles.serviceChipText, selectedService === service.id && { color: COLORS.white }]}>{service.name}</Text>
-            <Text style={[styles.serviceChipPrice, selectedService === service.id && { color: COLORS.white }]}>€{service.price_from} – €{service.price_to}</Text>
+            <Text style={[styles.serviceChipPrice, selectedService === service.id && { color: COLORS.white }]}>{'\u20AC'}{service.price_from} – {'\u20AC'}{service.price_to}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -176,14 +177,22 @@ export default function BookingScreen() {
 
       {selectedService && selectedDate && selectedTime && (
         <View style={styles.summary}>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.primary, marginBottom: 6 }}>Samenvatting</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+            <MaterialCommunityIcons name="clipboard-check-outline" size={18} color={COLORS.primary} />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.primary }}>Samenvatting</Text>
+          </View>
           <Text style={{ fontSize: 14, color: COLORS.text }}>{services.find((s) => s.id === selectedService)?.name} bij {garage.name}</Text>
           <Text style={{ fontSize: 14, color: COLORS.text }}>{days.find((d) => d.date === selectedDate)?.label} om {selectedTime}</Text>
         </View>
       )}
 
       <TouchableOpacity style={[styles.bookButton, booking && { opacity: 0.7 }]} onPress={handleBook} disabled={booking}>
-        {booking ? <ActivityIndicator color={COLORS.white} /> : <Text style={{ color: COLORS.white, fontSize: 17, fontWeight: '700' }}>Afspraak bevestigen</Text>}
+        {booking ? <ActivityIndicator color={COLORS.white} /> : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <MaterialCommunityIcons name="calendar-check" size={20} color={COLORS.white} />
+            <Text style={{ color: COLORS.white, fontSize: 17, fontWeight: '700' }}>Afspraak bevestigen</Text>
+          </View>
+        )}
       </TouchableOpacity>
     </ScrollView>
   );
@@ -195,16 +204,16 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: '800', color: COLORS.text },
   garageName: { fontSize: 16, color: COLORS.textSecondary, marginBottom: 24 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 10, marginTop: 8 },
-  serviceChip: { backgroundColor: COLORS.surface, borderRadius: 10, padding: 12, marginRight: 10, borderWidth: 1.5, borderColor: COLORS.border, minWidth: 130 },
+  serviceChip: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 12, marginRight: 10, borderWidth: 1.5, borderColor: COLORS.border, minWidth: 130 },
   chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   serviceChipText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   serviceChipPrice: { fontSize: 12, color: COLORS.textSecondary, marginTop: 4 },
-  dateChip: { backgroundColor: COLORS.surface, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, borderWidth: 1.5, borderColor: COLORS.border },
+  dateChip: { backgroundColor: COLORS.surface, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 10, marginRight: 8, borderWidth: 1.5, borderColor: COLORS.border },
   dateChipText: { fontSize: 14, fontWeight: '500', color: COLORS.text },
   timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  timeChip: { backgroundColor: COLORS.surface, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: COLORS.border },
+  timeChip: { backgroundColor: COLORS.surface, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1.5, borderColor: COLORS.border },
   timeChipText: { fontSize: 14, fontWeight: '500', color: COLORS.text },
-  input: { height: 46, backgroundColor: COLORS.surface, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 14, fontSize: 15, color: COLORS.text, marginBottom: 10 },
-  summary: { backgroundColor: '#EFF6FF', borderRadius: 10, padding: 16, marginBottom: 16 },
-  bookButton: { backgroundColor: COLORS.secondary, borderRadius: 12, padding: 16, alignItems: 'center' },
+  input: { height: 46, backgroundColor: COLORS.surface, borderRadius: 12, borderWidth: 1.5, borderColor: COLORS.border, paddingHorizontal: 14, fontSize: 15, color: COLORS.text, marginBottom: 10 },
+  summary: { backgroundColor: COLORS.primary + '10', borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.primary + '25' },
+  bookButton: { backgroundColor: COLORS.secondary, borderRadius: 14, padding: 16, alignItems: 'center' },
 });

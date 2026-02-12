@@ -12,6 +12,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -39,8 +42,61 @@ const EMPTY_FORM: CarForm = {
   mileage: '',
 };
 
+/* ── Dutch license plate component ─────────────────────────── */
+function LicensePlate({ plate }: { plate: string }) {
+  return (
+    <View style={plateStyles.wrapper}>
+      <View style={plateStyles.blueStrip}>
+        <Text style={plateStyles.nlText}>NL</Text>
+      </View>
+      <View style={plateStyles.yellowBg}>
+        <Text style={plateStyles.plateText}>{plate}</Text>
+      </View>
+    </View>
+  );
+}
+
+const plateStyles = StyleSheet.create({
+  wrapper: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    height: 36,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#1a1a2e',
+    overflow: 'hidden',
+  },
+  blueStrip: {
+    width: 22,
+    backgroundColor: '#003DA5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nlText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '800',
+  },
+  yellowBg: {
+    backgroundColor: '#FFCC00',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  plateText: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1a1a2e',
+    letterSpacing: 1.5,
+  },
+});
+
+/* ── Main screen ───────────────────────────────────────────── */
 export default function MijnAutosScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
+  const route = useRoute();
+  const insets = useSafeAreaInsets();
+  const isTab = route.name === 'MijnAuto';
   const [cars, setCars] = useState<Car[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -184,52 +240,86 @@ export default function MijnAutosScreen() {
 
   const renderCar = ({ item }: { item: Car }) => (
     <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      {/* Top row: icon + info + badge */}
+      <View style={styles.cardTop}>
+        <View style={styles.cardTopLeft}>
+          <View
+            style={[
+              styles.carIconCircle,
+              item.is_default && { backgroundColor: COLORS.secondary + '15' },
+            ]}
+          >
+            <MaterialCommunityIcons
+              name="car"
+              size={28}
+              color={item.is_default ? COLORS.secondary : COLORS.textLight}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.carName}>
               {item.brand} {item.model}
             </Text>
-            {item.is_default && (
-              <View style={styles.defaultBadge}>
-                <Text style={styles.defaultText}>Standaard</Text>
-              </View>
-            )}
+            {item.mileage ? (
+              <Text style={styles.carMileage}>
+                Kilometerstand: {item.mileage.toLocaleString('nl-NL')} km
+              </Text>
+            ) : null}
           </View>
-          <Text style={styles.carDetails}>
-            {item.year} · {item.license_plate}
-          </Text>
-          {item.mileage && (
-            <Text style={styles.carMileage}>
-              {item.mileage.toLocaleString()} km
-            </Text>
-          )}
         </View>
-        <Text style={{ fontSize: 32 }}>🚗</Text>
-      </View>
 
-      <View style={styles.cardActions}>
-        {!item.is_default && (
+        {/* Default badge or "Maak standaard" button */}
+        {item.is_default ? (
+          <View style={styles.defaultBadge}>
+            <MaterialCommunityIcons name="star" size={12} color={COLORS.white} />
+            <Text style={styles.defaultBadgeText}>STANDAARD</Text>
+          </View>
+        ) : (
           <TouchableOpacity
-            style={styles.actionButton}
+            style={styles.makeDefaultBtn}
             onPress={() => handleSetDefault(item)}
+            activeOpacity={0.7}
           >
-            <Text style={styles.actionText}>Standaard maken</Text>
+            <Text style={styles.makeDefaultText}>Maak{'\n'}standaard</Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      {/* License plate */}
+      <View style={{ marginTop: 14, marginBottom: 6 }}>
+        <LicensePlate plate={item.license_plate} />
+      </View>
+
+      {/* Action buttons */}
+      <View style={styles.cardActions}>
         <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => openEditForm(item)}
+          style={styles.actionBtn}
+          onPress={() =>
+            navigation.navigate('Onderhoudshistorie', {
+              licensePlate: item.license_plate,
+              carName: `${item.brand} ${item.model}`,
+            })
+          }
+          activeOpacity={0.7}
         >
-          <Text style={styles.actionText}>Bewerken</Text>
+          <MaterialCommunityIcons name="history" size={15} color={COLORS.text} />
+          <Text style={styles.actionBtnText}>Geschiedenis</Text>
         </TouchableOpacity>
+
         <TouchableOpacity
-          style={[styles.actionButton, { borderColor: COLORS.danger }]}
-          onPress={() => handleDelete(item)}
+          style={styles.actionBtn}
+          onPress={() => openEditForm(item)}
+          activeOpacity={0.7}
         >
-          <Text style={[styles.actionText, { color: COLORS.danger }]}>
-            Verwijderen
-          </Text>
+          <MaterialCommunityIcons name="pencil" size={15} color={COLORS.text} />
+          <Text style={styles.actionBtnText}>Bewerken</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => handleDelete(item)}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons name="delete-outline" size={20} color={COLORS.danger} />
         </TouchableOpacity>
       </View>
     </View>
@@ -296,14 +386,14 @@ export default function MijnAutosScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.formButton, { backgroundColor: COLORS.primary }]}
+              style={[styles.formButton, { backgroundColor: COLORS.secondary }]}
               onPress={handleSave}
               disabled={saving}
             >
               {saving ? (
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
-                <Text style={{ color: COLORS.white, fontWeight: '600' }}>
+                <Text style={{ color: COLORS.white, fontWeight: '700' }}>
                   {editingCarId ? 'Opslaan' : 'Toevoegen'}
                 </Text>
               )}
@@ -316,21 +406,45 @@ export default function MijnAutosScreen() {
         data={cars}
         keyExtractor={(item) => item.id}
         renderItem={renderCar}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingTop: insets.top + 8 }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListHeaderComponent={
-          !showForm ? (
-            <TouchableOpacity style={styles.addButton} onPress={openAddForm}>
-              <Text style={styles.addButtonText}>+ Auto toevoegen</Text>
-            </TouchableOpacity>
-          ) : null
+          <>
+            {/* Custom header */}
+            <View style={styles.customHeader}>
+              {!isTab && (
+                <TouchableOpacity
+                  style={styles.backBtn}
+                  onPress={() => navigation.goBack()}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.text} />
+                </TouchableOpacity>
+              )}
+              {isTab && <View style={{ width: 8 }} />}
+              <Text style={styles.brandingText}>AUTOBUDDY</Text>
+              <View style={{ width: isTab ? 8 : 40 }} />
+            </View>
+            <Text style={styles.pageTitle}>Mijn auto's</Text>
+
+            {!showForm && (
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={openAddForm}
+                activeOpacity={0.85}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color={COLORS.white} />
+                <Text style={styles.addButtonText}>Auto toevoegen</Text>
+              </TouchableOpacity>
+            )}
+          </>
         }
         ListEmptyComponent={
           !showForm ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🚗</Text>
+              <MaterialCommunityIcons name="car-outline" size={48} color={COLORS.textLight} />
               <Text style={styles.emptyText}>Geen auto's opgeslagen</Text>
               <Text style={styles.emptySubText}>
                 Voeg je auto toe om sneller afspraken te maken.
@@ -345,92 +459,221 @@ export default function MijnAutosScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  center: { justifyContent: 'center', alignItems: 'center' },
-  list: { padding: 16, paddingBottom: 40 },
-  card: {
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  list: { paddingHorizontal: 16, paddingBottom: 40 },
+
+  // Custom header
+  customHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: COLORS.black,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
-  cardHeader: {
+  brandingText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.secondary,
+    letterSpacing: 2,
+  },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginTop: 12,
+    marginBottom: 18,
+  },
+
+  // Card
+  card: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  carName: { fontSize: 17, fontWeight: '700', color: COLORS.text },
-  carDetails: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
-  carMileage: { fontSize: 13, color: COLORS.textLight, marginTop: 2 },
-  defaultBadge: {
-    backgroundColor: COLORS.primary + '20',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    marginLeft: 8,
+  cardTopLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    flex: 1,
   },
-  defaultText: { fontSize: 11, fontWeight: '600', color: COLORS.primary },
+
+  // Car icon circle
+  carIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: COLORS.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Car info
+  carName: {
+    fontSize: 19,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  carMileage: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+    marginTop: 3,
+  },
+
+  // Default badge
+  defaultBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    gap: 4,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: COLORS.white,
+    letterSpacing: 0.5,
+  },
+
+  // "Maak standaard" button
+  makeDefaultBtn: {
+    backgroundColor: COLORS.secondary + '12',
+    borderWidth: 1,
+    borderColor: COLORS.secondary + '25',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  makeDefaultText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.secondary,
+    textAlign: 'center',
+    lineHeight: 14,
+  },
+
+  // Action buttons row
   cardActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     marginTop: 14,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingTop: 12,
   },
-  actionButton: {
+  actionBtn: {
     flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: COLORS.background,
+    gap: 6,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  deleteBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.danger + '10',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  actionText: { fontSize: 12, fontWeight: '600', color: COLORS.primary },
+
+  // Add button
   addButton: {
-    backgroundColor: COLORS.secondary,
-    borderRadius: 12,
-    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    backgroundColor: COLORS.secondary,
+    borderRadius: 999,
+    paddingVertical: 16,
+    marginBottom: 18,
+    gap: 8,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  addButtonText: { color: COLORS.white, fontSize: 16, fontWeight: '700' },
+  addButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // Form
   formContainer: {
     backgroundColor: COLORS.surface,
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
   formTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   input: {
-    height: 44,
-    borderWidth: 1,
+    height: 48,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
-    borderRadius: 10,
+    borderRadius: 14,
     paddingHorizontal: 14,
     fontSize: 15,
     color: COLORS.text,
     backgroundColor: COLORS.background,
-    marginBottom: 8,
+    marginBottom: 10,
   },
   formButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
   },
+
+  // Empty state
   empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 17, fontWeight: '600', color: COLORS.text },
+  emptyText: { fontSize: 17, fontWeight: '600', color: COLORS.text, marginTop: 10 },
   emptySubText: {
     fontSize: 14,
     color: COLORS.textSecondary,

@@ -377,6 +377,62 @@ export async function createReview(review: {
 }
 
 // ============================================
+// MAINTENANCE HISTORY
+// ============================================
+
+export async function fetchMaintenanceHistory(userId: string) {
+  const { data, error } = await supabase
+    .from('maintenance_records')
+    .select(`
+      *,
+      garages:garage_id (name, city),
+      bookings:booking_id (
+        service_id,
+        garage_services:service_id (name, category)
+      )
+    `)
+    .eq('user_id', userId)
+    .order('service_date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchMaintenanceForCar(userId: string, licensePlate: string) {
+  const { data, error } = await supabase
+    .from('maintenance_records')
+    .select(`
+      *,
+      garages:garage_id (name, city),
+      bookings:booking_id (
+        service_id,
+        garage_services:service_id (name, category)
+      )
+    `)
+    .eq('user_id', userId)
+    .eq('car_license_plate', licensePlate)
+    .order('service_date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchNextApkDate(userId: string, licensePlate: string) {
+  const { data, error } = await supabase
+    .from('maintenance_records')
+    .select('next_apk_date')
+    .eq('user_id', userId)
+    .eq('car_license_plate', licensePlate)
+    .not('next_apk_date', 'is', null)
+    .order('service_date', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.next_apk_date || null;
+}
+
+// ============================================
 // DEV / SEED
 // ============================================
 

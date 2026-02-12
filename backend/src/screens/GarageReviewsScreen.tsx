@@ -8,6 +8,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
 import { fetchGarageReviews } from '../services/garageService';
 import StarDisplay from '../components/StarDisplay';
@@ -22,6 +23,19 @@ function timeAgo(dateStr: string): string {
   if (diff < 86400) return `${Math.floor(diff / 3600)} uur geleden`;
   if (diff < 2592000) return `${Math.floor(diff / 86400)} dagen geleden`;
   return date.toLocaleDateString('nl-NL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function RatingBar({ label, value, max = 5 }: { label: string; value: number; max?: number }) {
+  const percentage = max > 0 ? (value / max) * 100 : 0;
+  return (
+    <View style={styles.ratingBarRow}>
+      <Text style={styles.ratingBarLabel}>{label}</Text>
+      <View style={styles.ratingBarTrack}>
+        <View style={[styles.ratingBarFill, { width: `${percentage}%` }]} />
+      </View>
+      <Text style={styles.ratingBarValue}>{value.toFixed(1)}</Text>
+    </View>
+  );
 }
 
 export default function GarageReviewsScreen() {
@@ -53,11 +67,21 @@ export default function GarageReviewsScreen() {
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
     : 0;
 
+  const avgQuality = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + (r.service_quality || 0), 0) / reviews.length
+    : 0;
+  const avgHonesty = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + (r.honesty || 0), 0) / reviews.length
+    : 0;
+  const avgSpeed = reviews.length > 0
+    ? reviews.reduce((sum, r) => sum + (r.speed || 0), 0) / reviews.length
+    : 0;
+
   const renderReview = ({ item }: { item: any }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>?</Text>
+          <MaterialCommunityIcons name="account" size={18} color={COLORS.textLight} />
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.anonName}>Anonieme gebruiker</Text>
@@ -69,7 +93,7 @@ export default function GarageReviewsScreen() {
         </View>
       </View>
 
-      {/* Sub-ratings */}
+      {/* Sub-ratings with mini bars */}
       <View style={styles.subRatings}>
         <View style={styles.subRatingItem}>
           <Text style={styles.subLabel}>Kwaliteit</Text>
@@ -103,15 +127,25 @@ export default function GarageReviewsScreen() {
         contentContainerStyle={styles.list}
         ListHeaderComponent={
           <View style={styles.summaryCard}>
-            <Text style={styles.summaryRating}>{avgRating.toFixed(1)}</Text>
-            <StarDisplay rating={avgRating} size={24} />
-            <Text style={styles.summaryCount}>
-              {reviews.length} beoordeling{reviews.length !== 1 ? 'en' : ''}
-            </Text>
+            <View style={styles.summaryTop}>
+              <View style={styles.summaryRatingCol}>
+                <Text style={styles.summaryRating}>{avgRating.toFixed(1)}</Text>
+                <StarDisplay rating={avgRating} size={22} />
+                <Text style={styles.summaryCount}>
+                  {reviews.length} beoordeling{reviews.length !== 1 ? 'en' : ''}
+                </Text>
+              </View>
+              <View style={styles.summaryBars}>
+                <RatingBar label="Kwaliteit" value={avgQuality} />
+                <RatingBar label="Eerlijkheid" value={avgHonesty} />
+                <RatingBar label="Snelheid" value={avgSpeed} />
+              </View>
+            </View>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
+            <MaterialCommunityIcons name="star-outline" size={48} color={COLORS.textLight} />
             <Text style={styles.emptyText}>Nog geen beoordelingen</Text>
             <Text style={styles.emptySubText}>
               Wees de eerste die deze garage beoordeelt!
@@ -129,26 +163,43 @@ const styles = StyleSheet.create({
   list: { padding: 16, paddingBottom: 40 },
   summaryCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
-    alignItems: 'center',
     marginBottom: 16,
     shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 6,
+    elevation: 3,
   },
+  summaryTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  summaryRatingCol: { alignItems: 'center', marginRight: 20 },
   summaryRating: { fontSize: 40, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
-  summaryCount: { fontSize: 14, color: COLORS.textSecondary, marginTop: 6 },
+  summaryCount: { fontSize: 13, color: COLORS.textSecondary, marginTop: 6 },
+  summaryBars: { flex: 1, justifyContent: 'center', gap: 8 },
+  ratingBarRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  ratingBarLabel: { fontSize: 11, color: COLORS.textSecondary, width: 70 },
+  ratingBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  ratingBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
+  },
+  ratingBarValue: { fontSize: 12, fontWeight: '600', color: COLORS.text, width: 28, textAlign: 'right' },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 10,
     shadowColor: COLORS.black,
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -157,11 +208,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { fontSize: 16, color: COLORS.textLight },
   anonName: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   timeAgo: { fontSize: 12, color: COLORS.textLight, marginTop: 1 },
   ratingNumber: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },
@@ -183,6 +233,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   empty: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { fontSize: 16, fontWeight: '600', color: COLORS.text },
+  emptyText: { fontSize: 16, fontWeight: '600', color: COLORS.text, marginTop: 10 },
   emptySubText: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
 });

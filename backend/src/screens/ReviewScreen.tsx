@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, SERVICE_LABELS } from '../constants';
 import { ServiceCategory } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -35,9 +36,11 @@ function StarSelector({
       <View style={styles.stars}>
         {[1, 2, 3, 4, 5].map((star) => (
           <TouchableOpacity key={star} onPress={() => onChange(star)} style={styles.starTouch}>
-            <Text style={[styles.starIcon, star <= value && styles.starActive]}>
-              {star <= value ? '★' : '☆'}
-            </Text>
+            <MaterialCommunityIcons
+              name={star <= value ? 'star' : 'star-outline'}
+              size={28}
+              color={star <= value ? COLORS.star : COLORS.border}
+            />
           </TouchableOpacity>
         ))}
       </View>
@@ -107,7 +110,7 @@ export default function ReviewScreen() {
     if (!user || !booking) return;
 
     if (serviceQuality === 0 || honesty === 0 || speed === 0) {
-      Alert.alert('Alle categorieën verplicht', 'Beoordeel kwaliteit, eerlijkheid en snelheid.');
+      Alert.alert('Alle categorie\u00EBn verplicht', 'Beoordeel kwaliteit, eerlijkheid en snelheid.');
       return;
     }
 
@@ -214,13 +217,13 @@ export default function ReviewScreen() {
         </Text>
         <Text style={styles.dateInfo}>{formatDateNL(booking.date)} om {booking.time_slot}</Text>
         {service?.price_from != null && (
-          <Text style={styles.priceInfo}>€{service.price_from} – €{service.price_to}</Text>
+          <Text style={styles.priceInfo}>{'\u20AC'}{service.price_from} – {'\u20AC'}{service.price_to}</Text>
         )}
       </View>
 
       {/* Garage notes */}
       {booking.garage_notes && (
-        <View style={[styles.card, { backgroundColor: '#FFFBEB' }]}>
+        <View style={[styles.card, { backgroundColor: COLORS.warning + '10' }]}>
           <Text style={[styles.cardTitle, { color: COLORS.warning }]}>Notities van de garage</Text>
           <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20 }}>
             {booking.garage_notes}
@@ -272,7 +275,10 @@ export default function ReviewScreen() {
         {submitting ? (
           <ActivityIndicator color={COLORS.white} />
         ) : (
-          <Text style={styles.submitText}>Beoordeling plaatsen</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <MaterialCommunityIcons name="star-check" size={20} color={COLORS.white} />
+            <Text style={styles.submitText}>Beoordeling plaatsen</Text>
+          </View>
         )}
       </TouchableOpacity>
     </ScrollView>
@@ -285,13 +291,13 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     marginBottom: 12,
     shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
     elevation: 2,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
@@ -310,10 +316,8 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   starLabel: { fontSize: 15, fontWeight: '500', color: COLORS.text },
-  stars: { flexDirection: 'row', gap: 4 },
-  starTouch: { padding: 4 },
-  starIcon: { fontSize: 28, color: COLORS.border },
-  starActive: { color: '#F59E0B' },
+  stars: { flexDirection: 'row', gap: 2 },
+  starTouch: { padding: 2 },
   // Overall calculated rating
   overallRow: {
     flexDirection: 'row',
@@ -325,14 +329,13 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.primary,
   },
   overallLabel: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
-  overallStars: { fontSize: 18 },
   overallScore: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
   // Comment
   commentInput: {
     height: 100,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.border,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingTop: 12,
     fontSize: 15,
@@ -343,7 +346,7 @@ const styles = StyleSheet.create({
   // Submit
   submitButton: {
     backgroundColor: COLORS.secondary,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     alignItems: 'center',
     marginTop: 4,
@@ -352,7 +355,6 @@ const styles = StyleSheet.create({
   // Existing review display
   ratingDisplay: { alignItems: 'center', paddingVertical: 8 },
   ratingBig: { fontSize: 40, fontWeight: '800', color: COLORS.text },
-  ratingStars: { marginTop: 4 },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -360,7 +362,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   categoryLabel: { fontSize: 14, color: COLORS.textSecondary },
-  categoryStars: { fontSize: 16 },
   commentText: {
     fontSize: 14,
     color: COLORS.text,

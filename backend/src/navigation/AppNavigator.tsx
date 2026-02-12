@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 
@@ -20,21 +21,26 @@ import FavorieteGaragesScreen from '../screens/FavorieteGaragesScreen';
 import AfspraakDetailScreen from '../screens/AfspraakDetailScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import GarageReviewsScreen from '../screens/GarageReviewsScreen';
+import OnderhoudshistorieScreen from '../screens/OnderhoudshistorieScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const TAB_ICONS: Record<string, string> = {
+  Home: 'home',
+  Afspraken: 'calendar-month',
+  MijnAuto: 'car',
+  Profile: 'account',
+};
+
 function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Home: '🏠',
-    Search: '🔍',
-    Map: '🗺️',
-    Profile: '👤',
-  };
+  const iconName = TAB_ICONS[label] || 'circle';
   return (
-    <Text style={{ fontSize: focused ? 24 : 20, opacity: focused ? 1 : 0.5 }}>
-      {icons[label] || '•'}
-    </Text>
+    <MaterialCommunityIcons
+      name={iconName as any}
+      size={focused ? 26 : 22}
+      color={focused ? COLORS.primary : COLORS.textLight}
+    />
   );
 }
 
@@ -48,8 +54,14 @@ function MainTabs() {
         tabBarStyle: {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.border,
-          paddingBottom: 4,
-          height: 60,
+          paddingBottom: 6,
+          paddingTop: 4,
+          height: 64,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 8,
+          elevation: 8,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -67,22 +79,22 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ title: 'AutoBuddy', tabBarLabel: 'Home' }}
+        options={{ headerShown: false, tabBarLabel: 'Home' }}
       />
       <Tab.Screen
-        name="Search"
-        component={SearchScreen}
-        options={{ title: 'Zoeken', tabBarLabel: 'Zoeken' }}
+        name="Afspraken"
+        component={MijnAfsprakenScreen}
+        options={{ headerShown: false, tabBarLabel: 'Afspraken' }}
       />
       <Tab.Screen
-        name="Map"
-        component={MapScreen}
-        options={{ title: 'Kaart', tabBarLabel: 'Kaart' }}
+        name="MijnAuto"
+        component={MijnAutosScreen}
+        options={{ headerShown: false, tabBarLabel: 'Mijn Auto' }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Profiel', tabBarLabel: 'Profiel' }}
+        options={{ headerShown: false, tabBarLabel: 'Profiel' }}
       />
     </Tab.Navigator>
   );
@@ -123,9 +135,19 @@ export default function AppNavigator() {
               options={{ headerShown: false }}
             />
             <Stack.Screen
+              name="Search"
+              component={SearchScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="Map"
+              component={MapScreen}
+              options={{ title: 'Kaart' }}
+            />
+            <Stack.Screen
               name="GarageDetail"
               component={GarageDetailScreen}
-              options={{ title: 'Garage Details' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="Booking"
@@ -135,22 +157,22 @@ export default function AppNavigator() {
             <Stack.Screen
               name="MijnAfspraken"
               component={MijnAfsprakenScreen}
-              options={{ title: 'Mijn afspraken' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="MijnAutos"
               component={MijnAutosScreen}
-              options={{ title: "Mijn auto's" }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="FavorieteGarages"
               component={FavorieteGaragesScreen}
-              options={{ title: 'Favoriete garages' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="AfspraakDetail"
               component={AfspraakDetailScreen}
-              options={{ title: 'Afspraak details' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="Review"
@@ -161,6 +183,11 @@ export default function AppNavigator() {
               name="GarageReviews"
               component={GarageReviewsScreen}
               options={{ title: 'Beoordelingen' }}
+            />
+            <Stack.Screen
+              name="Onderhoudshistorie"
+              component={OnderhoudshistorieScreen}
+              options={{ title: 'Onderhoudshistorie' }}
             />
           </>
         )}

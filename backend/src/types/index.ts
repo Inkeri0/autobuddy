@@ -181,6 +181,26 @@ export interface Car {
   updated_at?: string;
 }
 
+// --- Maintenance Record Types ---
+export interface MaintenanceRecord {
+  id: string;
+  booking_id: string;
+  garage_id: string;
+  user_id: string;
+  car_license_plate: string;
+  car_brand?: string;
+  car_model?: string;
+  car_year?: number;
+  mileage: number;
+  work_description: string;
+  service_date: string;     // YYYY-MM-DD
+  next_apk_date?: string;   // YYYY-MM-DD
+  created_at: string;
+  // Joined data
+  garage?: { name: string; city: string };
+  booking?: { service_id: string; garage_services?: { name: string; category: string } };
+}
+
 // --- Favorite Types ---
 export interface Favorite {
   id: string;

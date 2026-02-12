@@ -11,6 +11,7 @@ import {
 import ClusteredMapView from 'react-native-map-clustering';
 import { Marker, Callout, type Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, AVAILABILITY_COLORS, MAASTRICHT_MAP_REGION } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useGarages } from '../hooks/useGarages';
@@ -134,7 +135,10 @@ export default function MapScreen() {
           <Text style={styles.cardCity}>{garage.city}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
-          <Text style={styles.cardRating}>★ {(garage.average_rating || 0).toFixed(1)}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <MaterialCommunityIcons name="star" size={14} color={COLORS.star} />
+            <Text style={styles.cardRating}>{(garage.average_rating || 0).toFixed(1)}</Text>
+          </View>
           <Text style={[styles.statusLabel, { color: PIN_COLORS[status] }]}>
             {getStatusLabel(status)}
           </Text>
@@ -239,6 +243,7 @@ export default function MapScreen() {
 
       {/* Garage list */}
       <View style={styles.listContainer}>
+        <View style={styles.dragHandle} />
         <Text style={styles.listHeader}>
           {visibleGarages.length} garage{visibleGarages.length !== 1 ? 's' : ''} in beeld
         </Text>
@@ -249,6 +254,7 @@ export default function MapScreen() {
           renderItem={renderGarageCard}
           ListEmptyComponent={
             <View style={styles.emptyList}>
+              <MaterialCommunityIcons name="map-search" size={32} color={COLORS.textLight} />
               <Text style={styles.emptyText}>Geen garages in dit gebied</Text>
               <Text style={styles.emptySubtext}>Zoom uit of verschuif de kaart</Text>
             </View>
@@ -276,8 +282,8 @@ const styles = StyleSheet.create({
   },
   dateChip: {
     flex: 1,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 10,
     backgroundColor: COLORS.background,
     alignItems: 'center',
   },
@@ -286,7 +292,7 @@ const styles = StyleSheet.create({
   },
   dateChipText: {
     fontSize: 12,
-    fontWeight: '500' as const,
+    fontWeight: '600' as const,
     color: COLORS.textSecondary,
   },
   dateChipTextActive: {
@@ -327,7 +333,7 @@ const styles = StyleSheet.create({
   calloutRating: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: '#F59E0B',
+    color: COLORS.star,
   },
   calloutStatus: {
     fontSize: 12,
@@ -361,31 +367,47 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 11,
     color: COLORS.textSecondary,
+    fontWeight: '500' as const,
   },
   // List
   listContainer: {
     flex: 1,
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -10,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 4,
   },
   listHeader: {
     fontSize: 14,
     fontWeight: '600' as const,
     color: COLORS.textSecondary,
     paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 6,
+    paddingBottom: 8,
   },
   garageCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 8,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   garageCardClosed: {
     opacity: 0.55,
@@ -411,7 +433,7 @@ const styles = StyleSheet.create({
   cardRating: {
     fontSize: 14,
     fontWeight: '600' as const,
-    color: '#F59E0B',
+    color: COLORS.text,
   },
   statusLabel: {
     fontSize: 11,
@@ -425,6 +447,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: COLORS.textSecondary,
     fontSize: 14,
+    marginTop: 8,
   },
   emptySubtext: {
     color: COLORS.textLight,

@@ -2,21 +2,22 @@ import { ServiceCategory } from '../types';
 
 // --- App Theme Colors ---
 export const COLORS = {
-  primary: '#1E3A5F',       // Deep blue - trust & professionalism
-  primaryLight: '#2E5A8F',
+  primary: '#3b1f61',       // Deep purple - trust & premium feel
+  primaryLight: '#5b3a8a',
   secondary: '#FF6B35',     // Orange - energy & action
   secondaryLight: '#FF8B5E',
-  background: '#F5F7FA',
+  background: '#f7f6f8',    // Light purple-gray
   surface: '#FFFFFF',
-  text: '#1A1A2E',
-  textSecondary: '#6B7280',
-  textLight: '#9CA3AF',
-  border: '#E5E7EB',
+  text: '#1a1a2e',
+  textSecondary: '#6b7280',
+  textLight: '#9ca3af',
+  border: '#e8e5ed',        // Subtle purple-tinted border
   success: '#10B981',       // Green - available
   warning: '#F59E0B',       // Orange - limited
   danger: '#EF4444',        // Red - full / error
   white: '#FFFFFF',
   black: '#000000',
+  star: '#F59E0B',          // Gold star color
 };
 
 // --- Availability Status Colors ---

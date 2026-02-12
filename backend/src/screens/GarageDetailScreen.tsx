@@ -7,25 +7,29 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
-import { COLORS, AVAILABILITY_COLORS } from '../constants';
-import { AvailabilityStatus } from '../types';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { COLORS } from '../constants';
 import { useGarageDetail } from '../hooks/useGarages';
 import { useAuth } from '../hooks/useAuth';
 import { isFavorited, addFavorite, removeFavorite } from '../services/garageService';
-import StarDisplay from '../components/StarDisplay';
+
+const HERO_HEIGHT = 280;
 
 export default function GarageDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { garageId } = route.params;
   const { garage, services, loading, error, refresh } = useGarageDetail(garageId);
   const { user } = useAuth();
   const [favorited, setFavorited] = useState(false);
   const [favLoading, setFavLoading] = useState(false);
 
-  // Refetch garage data when screen regains focus (e.g. after placing a review)
   useFocusEffect(
     useCallback(() => {
       refresh();
@@ -58,7 +62,7 @@ export default function GarageDetailScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.center]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -66,126 +70,521 @@ export default function GarageDetailScreen() {
 
   if (error || !garage) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, styles.center]}>
         <Text style={{ fontSize: 16, color: COLORS.danger }}>Garage niet gevonden</Text>
       </View>
     );
   }
 
-  const statusLabel: Record<string, string> = {
-    green: 'Veel plek',
-    orange: 'Beperkt beschikbaar',
-    red: 'Vol vandaag',
-  };
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={{ marginBottom: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text style={[styles.name, { flex: 1 }]}>{garage.name}</Text>
-          <TouchableOpacity onPress={toggleFavorite} disabled={favLoading} style={{ padding: 4 }}>
-            <Text style={{ fontSize: 24 }}>{favorited ? '❤️' : '🤍'}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-          <View style={[styles.dot, { backgroundColor: AVAILABILITY_COLORS[garage.availability_status as AvailabilityStatus] || COLORS.success }]} />
-          <Text style={{ fontSize: 14, fontWeight: '500', color: COLORS.textSecondary }}>{statusLabel[garage.availability_status] || 'Beschikbaar'}</Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>📍 Adres</Text>
-          <Text style={styles.infoValue}>{garage.address}, {garage.city}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>📞 Telefoon</Text>
-          <TouchableOpacity onPress={() => Linking.openURL(`tel:${garage.phone}`)}>
-            <Text style={[styles.infoValue, { color: COLORS.secondary }]}>{garage.phone}</Text>
-          </TouchableOpacity>
-        </View>
-        {garage.email && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>✉️ E-mail</Text>
-            <Text style={styles.infoValue}>{garage.email}</Text>
-          </View>
-        )}
-      </View>
-
-      {garage.description ? (
-        <View style={[styles.card, { marginBottom: 16 }]}>
-          <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20 }}>{garage.description}</Text>
-        </View>
-      ) : null}
-
-      <TouchableOpacity
-        style={[styles.card, { alignItems: 'center', marginBottom: 24 }]}
-        onPress={() => navigation.navigate('GarageReviews', { garageId: garage.id, garageName: garage.name })}
+    <View style={styles.container}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        bounces={false}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Text style={{ fontSize: 32, fontWeight: '800', color: COLORS.text, marginRight: 10 }}>{(garage.average_rating || 0).toFixed(1)}</Text>
-          <StarDisplay rating={garage.average_rating || 0} size={20} />
-        </View>
-        <Text style={{ fontSize: 14, color: COLORS.textSecondary }}>{garage.total_reviews || 0} reviews</Text>
-        <Text style={{ fontSize: 12, color: COLORS.secondary, marginTop: 6, fontWeight: '600' }}>Bekijk alle beoordelingen →</Text>
-      </TouchableOpacity>
+        {/* Hero Section */}
+        <View style={[styles.hero, { height: HERO_HEIGHT }]}>
+          {/* Placeholder image background */}
+          <LinearGradient
+            colors={[COLORS.primary, COLORS.primaryLight, '#7c5caa']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradientBg}
+          >
+            <MaterialCommunityIcons
+              name="garage-open-variant"
+              size={100}
+              color="rgba(255,255,255,0.15)"
+            />
+          </LinearGradient>
 
-      {(garage.brands_serviced?.length > 0 || garage.specializations?.length > 0) && (
-        <>
-          <Text style={styles.sectionTitle}>Specialisaties</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
-            {(garage.brands_serviced || []).map((brand: string) => (
-              <View key={brand} style={styles.tag}><Text style={styles.tagText}>{brand}</Text></View>
-            ))}
-            {(garage.specializations || []).map((spec: string) => (
-              <View key={spec} style={[styles.tag, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
-                <Text style={[styles.tagText, { color: COLORS.primary }]}>{spec}</Text>
+          {/* Bottom fade to background */}
+          <LinearGradient
+            colors={['transparent', COLORS.background]}
+            style={styles.heroBottomFade}
+          />
+        </View>
+
+        {/* Floating Navigation Buttons */}
+        <View style={[styles.floatingNav, { top: insets.top + 8 }]}>
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.navBtn}
+            onPress={toggleFavorite}
+            disabled={favLoading}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons
+              name={favorited ? 'heart' : 'heart-outline'}
+              size={22}
+              color="#EF4444"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Content Body — overlaps hero */}
+        <View style={styles.body}>
+          {/* Garage Name */}
+          <Text style={styles.garageName}>{garage.name}</Text>
+
+          {/* Rating Badge */}
+          <TouchableOpacity
+            style={styles.ratingRow}
+            onPress={() =>
+              navigation.navigate('GarageReviews', {
+                garageId: garage.id,
+                garageName: garage.name,
+              })
+            }
+            activeOpacity={0.7}
+          >
+            <View style={styles.ratingBadge}>
+              <MaterialCommunityIcons name="star" size={14} color={COLORS.star} />
+              <Text style={styles.ratingValue}>
+                {(garage.average_rating || 0).toFixed(1)}
+              </Text>
+            </View>
+            <Text style={styles.reviewCount}>
+              ({garage.total_reviews || 0} beoordelingen)
+            </Text>
+          </TouchableOpacity>
+
+          {/* Address & Contact Card */}
+          <View style={styles.contactCard}>
+            <View style={styles.addressRow}>
+              <View style={styles.locationIconBox}>
+                <MaterialCommunityIcons name="map-marker" size={20} color={COLORS.primary} />
               </View>
-            ))}
-            {garage.is_ev_specialist && (
-              <View style={[styles.tag, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-                <Text style={[styles.tagText, { color: COLORS.success }]}>⚡ EV Specialist</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.addressMain}>{garage.address}</Text>
+                <Text style={styles.addressSub}>
+                  {garage.postal_code} {garage.city}
+                </Text>
               </View>
+              <TouchableOpacity onPress={() => navigation.navigate('Map')} activeOpacity={0.7}>
+                <Text style={styles.mapLink}>Kaart</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.contactBtns}>
+              {garage.phone && (
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() => Linking.openURL(`tel:${garage.phone}`)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="phone" size={16} color={COLORS.primary} />
+                  <Text style={styles.contactBtnLabel}>Bel nu</Text>
+                </TouchableOpacity>
+              )}
+              {garage.email && (
+                <TouchableOpacity
+                  style={styles.contactBtn}
+                  onPress={() => Linking.openURL(`mailto:${garage.email}`)}
+                  activeOpacity={0.7}
+                >
+                  <MaterialCommunityIcons name="email-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.contactBtnLabel}>E-mail</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Specialisaties */}
+          {(garage.brands_serviced?.length > 0 || garage.is_ev_specialist) && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Specialisaties</Text>
+              <View style={styles.tagsWrap}>
+                {(garage.brands_serviced || []).map((brand: string) => (
+                  <View key={brand} style={styles.tag}>
+                    <Text style={styles.tagText}>{brand}</Text>
+                  </View>
+                ))}
+                {garage.is_ev_specialist && (
+                  <View
+                    style={[
+                      styles.tag,
+                      {
+                        backgroundColor: COLORS.success + '12',
+                        borderColor: COLORS.success + '20',
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.tagText, { color: COLORS.success }]}>
+                      EV Specialist
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
+          {/* Description */}
+          {garage.description ? (
+            <View style={styles.section}>
+              <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 22 }}>
+                {garage.description}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Diensten & Prijzen */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Diensten & Prijzen</Text>
+              <Text style={styles.allServicesLabel}>ALLE DIENSTEN</Text>
+            </View>
+
+            {services.length > 0 ? (
+              <View style={{ gap: 10 }}>
+                {services.map((service: any) => (
+                  <TouchableOpacity
+                    key={service.id}
+                    style={styles.serviceCard}
+                    onPress={() =>
+                      navigation.navigate('Booking', {
+                        garageId: garage.id,
+                        serviceId: service.id,
+                      })
+                    }
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.serviceName}>{service.name}</Text>
+                      {service.description ? (
+                        <Text style={styles.serviceDesc} numberOfLines={1}>
+                          {service.description}
+                        </Text>
+                      ) : service.duration_minutes ? (
+                        <Text style={styles.serviceDesc}>
+                          ca. {service.duration_minutes} min
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.servicePrice}>
+                        {'\u20AC'} {service.price_from},-
+                      </Text>
+                      <View style={styles.bookLink}>
+                        <Text style={styles.bookLinkText}>Boek</Text>
+                        <MaterialCommunityIcons
+                          name="arrow-right"
+                          size={12}
+                          color={COLORS.primary}
+                        />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <Text
+                style={{
+                  color: COLORS.textSecondary,
+                  textAlign: 'center',
+                  paddingVertical: 20,
+                }}
+              >
+                Nog geen services beschikbaar
+              </Text>
             )}
           </View>
-        </>
-      )}
+        </View>
+      </ScrollView>
 
-      <Text style={styles.sectionTitle}>Services & Prijzen</Text>
-      {services.length > 0 ? services.map((service: any) => (
-        <TouchableOpacity key={service.id} style={styles.serviceCard} onPress={() => navigation.navigate('Booking', { garageId: garage.id, serviceId: service.id })}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: COLORS.text }}>{service.name}</Text>
-            <Text style={{ fontSize: 13, color: COLORS.textSecondary, marginTop: 2 }}>⏱ ca. {service.duration_minutes} min</Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: COLORS.primary }}>€{service.price_from} – €{service.price_to}</Text>
-            <Text style={{ fontSize: 12, color: COLORS.secondary, fontWeight: '600', marginTop: 2 }}>Boek →</Text>
-          </View>
+      {/* Sticky Bottom CTA */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]}>
+        <TouchableOpacity
+          style={styles.ctaButton}
+          onPress={() => navigation.navigate('Booking', { garageId: garage.id })}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="calendar-month" size={20} color={COLORS.white} />
+          <Text style={styles.ctaText}>Afspraak maken</Text>
         </TouchableOpacity>
-      )) : (
-        <Text style={{ color: COLORS.textSecondary, textAlign: 'center', paddingVertical: 20 }}>Nog geen services beschikbaar</Text>
-      )}
-
-      <TouchableOpacity style={styles.ctaButton} onPress={() => navigation.navigate('Booking', { garageId: garage.id })}>
-        <Text style={{ color: COLORS.white, fontSize: 17, fontWeight: '700' }}>Afspraak maken</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 20, paddingBottom: 40 },
-  name: { fontSize: 26, fontWeight: '800', color: COLORS.text },
-  dot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
-  card: { backgroundColor: COLORS.surface, borderRadius: 12, padding: 16, marginBottom: 16 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  infoLabel: { fontSize: 14, color: COLORS.textSecondary },
-  infoValue: { fontSize: 14, fontWeight: '500', color: COLORS.text, textAlign: 'right', flex: 1, marginLeft: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-  tag: { backgroundColor: COLORS.surface, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: COLORS.border },
-  tagText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  serviceCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: 10, padding: 14, marginBottom: 8 },
-  ctaButton: { backgroundColor: COLORS.secondary, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 16 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // Hero
+  hero: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+  heroGradientBg: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroBottomFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+  },
+
+  // Floating nav
+  floatingNav: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  navBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  // Body
+  body: {
+    marginTop: -48,
+    paddingHorizontal: 20,
+  },
+
+  // Title
+  garageName: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginBottom: 10,
+  },
+
+  // Rating
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 24,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary + '12',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    gap: 4,
+  },
+  ratingValue: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.primary,
+    lineHeight: 20,
+  },
+  reviewCount: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.textSecondary,
+  },
+
+  // Contact card
+  contactCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '08',
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginBottom: 16,
+  },
+  locationIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary + '08',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressMain: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  addressSub: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  mapLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  contactBtns: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  contactBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '15',
+    gap: 8,
+  },
+  contactBtnLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  // Sections
+  section: {
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 14,
+  },
+  allServicesLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textLight,
+    letterSpacing: 1.5,
+    marginBottom: 14,
+  },
+
+  // Tags
+  tagsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: COLORS.primary + '08',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '15',
+  },
+  tagText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+
+  // Service cards
+  serviceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '08',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  serviceName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  serviceDesc: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 3,
+  },
+  servicePrice: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.primary,
+  },
+  bookLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 4,
+  },
+  bookLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+
+  // Bottom bar
+  bottomBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderTopWidth: 1,
+    borderTopColor: COLORS.primary + '10',
+    ...Platform.select({
+      ios: {
+        // backdrop blur is automatic on iOS with translucent bg
+      },
+    }),
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.secondary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    gap: 8,
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  ctaText: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: '800',
+  },
 });
