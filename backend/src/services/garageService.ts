@@ -128,6 +128,48 @@ export async function fetchBookingCountsByDate(date: string): Promise<Record<str
   return counts;
 }
 
+// Normalize DB time format ("10:00:00" → "10:00")
+function normalizeTime(timeStr: string): string {
+  const parts = (timeStr || '').split(':');
+  return `${parts[0].padStart(2, '0')}:${parts[1] || '00'}`;
+}
+
+// Fetch unavailable time slots for a garage on a date
+// Checks both bookings AND garage-blocked slots from the dashboard
+export async function fetchUnavailableSlots(
+  garageId: string,
+  date: string
+): Promise<{ booked: string[]; blocked: string[] }> {
+  // 1. Fetch existing bookings (non-cancelled)
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from('bookings')
+    .select('time_slot')
+    .eq('garage_id', garageId)
+    .eq('date', date)
+    .neq('status', 'cancelled');
+
+  if (bookingsError) throw bookingsError;
+
+  const booked = (bookingsData || []).map((b) => normalizeTime(b.time_slot));
+
+  // 2. Fetch manually blocked slots from availability_slots (set via garage dashboard)
+  const { data: slotsData, error: slotsError } = await supabase
+    .from('availability_slots')
+    .select('time_slot')
+    .eq('garage_id', garageId)
+    .eq('date', date)
+    .eq('is_available', false);
+
+  if (slotsError) throw slotsError;
+
+  // Filter out slots that are already in booked (avoid duplicates)
+  const blocked = (slotsData || [])
+    .map((s) => normalizeTime(s.time_slot))
+    .filter((s) => !booked.includes(s));
+
+  return { booked, blocked };
+}
+
 // Fetch reviews for a garage
 export async function fetchGarageReviews(garageId: string) {
   const { data, error } = await supabase
@@ -375,6 +417,7 @@ export async function createReview(review: {
   service_quality: number;
   honesty: number;
   speed: number;
+  is_anonymous?: boolean;
 }) {
   const { data, error } = await supabase
     .from('reviews')

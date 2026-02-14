@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [bookingsLoading, setBookingsLoading] = useState(true);
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || '';
+  const avatarUrl = user?.user_metadata?.avatar_url || null;
   const initials = (user?.user_metadata?.full_name || '?')
     .split(' ')
     .map((w: string) => w.charAt(0))
@@ -99,8 +101,12 @@ export default function HomeScreen() {
         <View style={styles.decorCircle2} />
 
         <View style={styles.headerRow}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{initials}</Text>
+          <View style={[styles.avatarCircle, avatarUrl && styles.avatarCircleWithImage]}>
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <Text style={styles.avatarText}>{initials}</Text>
+            )}
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <Text style={styles.greeting}>
@@ -299,6 +305,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarCircleWithImage: {
+    borderColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'transparent',
+  },
+  avatarImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   avatarText: {
     fontSize: 18,

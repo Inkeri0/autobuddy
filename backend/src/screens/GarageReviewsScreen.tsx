@@ -77,14 +77,20 @@ export default function GarageReviewsScreen() {
     ? reviews.reduce((sum, r) => sum + (r.speed || 0), 0) / reviews.length
     : 0;
 
-  const renderReview = ({ item }: { item: any }) => (
+  const renderReview = ({ item }: { item: any }) => {
+    const isAnon = item.is_anonymous !== false;
+    const profile = item.profiles;
+    const displayName = isAnon ? 'Anonieme gebruiker' : (profile?.full_name || 'Gebruiker');
+    const initial = displayName.charAt(0).toUpperCase();
+
+    return (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.avatarCircle}>
-          <MaterialCommunityIcons name="account" size={18} color={COLORS.textLight} />
+          <Text style={styles.avatarInitial}>{initial}</Text>
         </View>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.anonName}>Anonieme gebruiker</Text>
+          <Text style={styles.anonName}>{displayName}</Text>
           <Text style={styles.timeAgo}>{timeAgo(item.created_at)}</Text>
         </View>
         <View style={{ alignItems: 'flex-end' }}>
@@ -117,6 +123,7 @@ export default function GarageReviewsScreen() {
       )}
     </View>
   );
+  };
 
   return (
     <View style={styles.container}>
@@ -212,6 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  avatarInitial: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
   anonName: { fontSize: 14, fontWeight: '600', color: COLORS.text },
   timeAgo: { fontSize: 12, color: COLORS.textLight, marginTop: 1 },
   ratingNumber: { fontSize: 12, color: COLORS.textSecondary, marginTop: 2 },

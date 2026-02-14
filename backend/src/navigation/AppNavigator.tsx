@@ -152,7 +152,7 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Booking"
               component={BookingScreen}
-              options={{ title: 'Afspraak maken' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="MijnAfspraken"
@@ -177,7 +177,7 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Review"
               component={ReviewScreen}
-              options={{ title: 'Beoordeling' }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="GarageReviews"

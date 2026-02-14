@@ -8,9 +8,13 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Switch,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SERVICE_LABELS } from '../constants';
 import { ServiceCategory } from '../types';
 import { useAuth } from '../hooks/useAuth';
@@ -19,7 +23,9 @@ import {
   fetchReviewForBooking,
   createReview,
 } from '../services/garageService';
-import StarDisplay from '../components/StarDisplay';
+
+const STAR_GOLD = '#F59E0B';
+const STAR_FADED = '#F59E0B33';
 
 function StarSelector({
   label,
@@ -37,9 +43,9 @@ function StarSelector({
         {[1, 2, 3, 4, 5].map((star) => (
           <TouchableOpacity key={star} onPress={() => onChange(star)} style={styles.starTouch}>
             <MaterialCommunityIcons
-              name={star <= value ? 'star' : 'star-outline'}
-              size={28}
-              color={star <= value ? COLORS.star : COLORS.border}
+              name="star"
+              size={26}
+              color={star <= value ? STAR_GOLD : STAR_FADED}
             />
           </TouchableOpacity>
         ))}
@@ -48,10 +54,24 @@ function StarSelector({
   );
 }
 
+function StarDisplayRow({ rating, size = 16 }: { rating: number; size?: number }) {
+  return (
+    <View style={{ flexDirection: 'row', gap: 2 }}>
+      {[1, 2, 3, 4, 5].map((s) => (
+        <MaterialCommunityIcons
+          key={s}
+          name="star"
+          size={size}
+          color={s <= rating ? STAR_GOLD : STAR_FADED}
+        />
+      ))}
+    </View>
+  );
+}
+
 function formatDateNL(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   return date.toLocaleDateString('nl-NL', {
-    weekday: 'short',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
@@ -62,6 +82,7 @@ export default function ReviewScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { bookingId } = route.params;
 
   const [booking, setBooking] = useState<any>(null);
@@ -73,8 +94,8 @@ export default function ReviewScreen() {
   const [honesty, setHonesty] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [comment, setComment] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
-  // Overall rating is the average of the 3 sub-ratings (rounded to nearest int for DB)
   const filledCount = [serviceQuality, honesty, speed].filter((v) => v > 0).length;
   const overallRatingExact = filledCount === 3
     ? (serviceQuality + honesty + speed) / 3
@@ -125,6 +146,7 @@ export default function ReviewScreen() {
         service_quality: serviceQuality,
         honesty,
         speed,
+        is_anonymous: isAnonymous,
       });
 
       Alert.alert(
@@ -161,211 +183,421 @@ export default function ReviewScreen() {
 
   const garage = booking.garages;
   const service = booking.garage_services;
+  const carInfo = [booking.car_brand, booking.car_model].filter(Boolean).join(' ');
+  const plateInfo = booking.car_license_plate;
 
+  // Existing review — read-only view
   if (existingReview) {
     return (
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Je beoordeling</Text>
-          <Text style={styles.garageName}>{garage?.name}</Text>
-          <Text style={styles.serviceInfo}>
-            {service?.name} — {formatDateNL(booking.date)}
-          </Text>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.text} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Beoordeling</Text>
+          <View style={{ width: 40 }} />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.ratingDisplay}>
-            <Text style={styles.ratingBig}>{existingReview.rating.toFixed(1)}</Text>
-            <StarDisplay rating={existingReview.rating} size={22} />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Appointment Summary */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryIcon}>
+                <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.garageName}>{garage?.name}</Text>
+                <Text style={styles.serviceDate}>
+                  {service?.name} {'\u2022'} {formatDateNL(booking.date)}
+                </Text>
+                {(carInfo || plateInfo) && (
+                  <Text style={styles.carInfo}>
+                    {carInfo}{carInfo && plateInfo ? ' \u2022 ' : ''}{plateInfo}
+                  </Text>
+                )}
+              </View>
+            </View>
           </View>
 
-          <View style={styles.divider} />
+          {/* Category ratings */}
+          <View style={styles.ratingsSection}>
+            <View style={styles.categoryRow}>
+              <Text style={styles.categoryLabel}>Kwaliteit</Text>
+              <StarDisplayRow rating={existingReview.service_quality} size={22} />
+            </View>
+            <View style={styles.categoryRow}>
+              <Text style={styles.categoryLabel}>Eerlijkheid</Text>
+              <StarDisplayRow rating={existingReview.honesty} size={22} />
+            </View>
+            <View style={styles.categoryRow}>
+              <Text style={styles.categoryLabel}>Snelheid</Text>
+              <StarDisplayRow rating={existingReview.speed} size={22} />
+            </View>
+          </View>
 
-          <View style={styles.categoryRow}>
-            <Text style={styles.categoryLabel}>Kwaliteit</Text>
-            <StarDisplay rating={existingReview.service_quality} size={16} />
-          </View>
-          <View style={styles.categoryRow}>
-            <Text style={styles.categoryLabel}>Eerlijkheid</Text>
-            <StarDisplay rating={existingReview.honesty} size={16} />
-          </View>
-          <View style={styles.categoryRow}>
-            <Text style={styles.categoryLabel}>Snelheid</Text>
-            <StarDisplay rating={existingReview.speed} size={16} />
+          {/* Average display */}
+          <View style={styles.averageBox}>
+            <Text style={styles.averageScore}>{existingReview.rating.toFixed(1)}</Text>
+            <Text style={styles.averageLabel}>UW GEMIDDELDE SCORE</Text>
           </View>
 
+          {/* Comment */}
           {existingReview.comment && (
-            <>
-              <View style={styles.divider} />
-              <Text style={styles.commentText}>"{existingReview.comment}"</Text>
-            </>
+            <View style={styles.commentSection}>
+              <Text style={styles.sectionLabel}>Opmerkingen</Text>
+              <View style={styles.commentBox}>
+                <Text style={styles.commentReadOnly}>{existingReview.comment}</Text>
+              </View>
+            </View>
           )}
-        </View>
-      </ScrollView>
+        </ScrollView>
+      </View>
     );
   }
 
+  // New review form
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Appointment summary */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Afspraak samenvatting</Text>
-        <Text style={styles.garageName}>{garage?.name}</Text>
-        <Text style={styles.serviceInfo}>
-          {service?.name}
-          {service?.category && ` — ${SERVICE_LABELS[service.category as ServiceCategory] || service.category}`}
-        </Text>
-        <Text style={styles.dateInfo}>{formatDateNL(booking.date)} om {booking.time_slot}</Text>
-        {service?.price_from != null && (
-          <Text style={styles.priceInfo}>{'\u20AC'}{service.price_from} – {'\u20AC'}{service.price_to}</Text>
-        )}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <MaterialCommunityIcons name="chevron-left" size={26} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Beoordeling</Text>
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Garage notes */}
-      {booking.garage_notes && (
-        <View style={[styles.card, { backgroundColor: COLORS.warning + '10' }]}>
-          <Text style={[styles.cardTitle, { color: COLORS.warning }]}>Notities van de garage</Text>
-          <Text style={{ fontSize: 14, color: COLORS.text, lineHeight: 20 }}>
-            {booking.garage_notes}
-          </Text>
-        </View>
-      )}
-
-      {/* Rating form */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Beoordeel je ervaring</Text>
-
-        <StarSelector label="Kwaliteit" value={serviceQuality} onChange={setServiceQuality} />
-        <StarSelector label="Eerlijkheid" value={honesty} onChange={setHonesty} />
-        <StarSelector label="Snelheid" value={speed} onChange={setSpeed} />
-
-        {overallRating > 0 && (
-          <View style={styles.overallRow}>
-            <Text style={styles.overallLabel}>Totaal</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <StarDisplay rating={overallRatingExact} size={18} />
-              <Text style={styles.overallScore}>{overallRatingExact.toFixed(1)}</Text>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Appointment Summary */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryIcon}>
+              <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.garageName}>{garage?.name}</Text>
+              <Text style={styles.serviceDate}>
+                {service?.name} {'\u2022'} {formatDateNL(booking.date)}
+              </Text>
+              {(carInfo || plateInfo) && (
+                <Text style={styles.carInfo}>
+                  {carInfo}{carInfo && plateInfo ? ' \u2022 ' : ''}{plateInfo}
+                </Text>
+              )}
             </View>
           </View>
-        )}
-      </View>
+        </View>
 
-      {/* Comment */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Opmerking (optioneel)</Text>
-        <TextInput
-          style={styles.commentInput}
-          placeholder="Vertel over je ervaring bij deze garage..."
-          placeholderTextColor={COLORS.textLight}
-          value={comment}
-          onChangeText={setComment}
-          multiline
-          textAlignVertical="top"
-          maxLength={500}
-        />
-        <Text style={styles.charCount}>{comment.length}/500</Text>
-      </View>
+        {/* Rating categories */}
+        <View style={styles.ratingsSection}>
+          <StarSelector label="Kwaliteit" value={serviceQuality} onChange={setServiceQuality} />
+          <StarSelector label="Eerlijkheid" value={honesty} onChange={setHonesty} />
+          <StarSelector label="Snelheid" value={speed} onChange={setSpeed} />
+        </View>
 
-      {/* Submit */}
-      <TouchableOpacity
-        style={[styles.submitButton, submitting && { opacity: 0.7 }]}
-        onPress={handleSubmit}
-        disabled={submitting}
-      >
-        {submitting ? (
-          <ActivityIndicator color={COLORS.white} />
-        ) : (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <MaterialCommunityIcons name="star-check" size={20} color={COLORS.white} />
-            <Text style={styles.submitText}>Beoordeling plaatsen</Text>
+        {/* Average display */}
+        <View style={styles.averageBox}>
+          <Text style={styles.averageScore}>
+            {overallRatingExact > 0 ? overallRatingExact.toFixed(1) : '-'}
+          </Text>
+          <Text style={styles.averageLabel}>UW GEMIDDELDE SCORE</Text>
+        </View>
+
+        {/* Comment */}
+        <View style={styles.commentSection}>
+          <Text style={styles.sectionLabel}>Opmerkingen</Text>
+          <View style={styles.commentInputWrapper}>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Deel uw ervaring met deze garage..."
+              placeholderTextColor={COLORS.textLight}
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              textAlignVertical="top"
+              maxLength={500}
+            />
+            <Text style={styles.charCount}>{comment.length} / 500</Text>
           </View>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        </View>
+
+        {/* Anonymous toggle */}
+        <View style={styles.anonymousRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.anonymousLabel}>Anoniem plaatsen</Text>
+            <Text style={styles.anonymousHint}>Je naam wordt niet getoond bij de beoordeling</Text>
+          </View>
+          <Switch
+            value={isAnonymous}
+            onValueChange={setIsAnonymous}
+            trackColor={{ false: COLORS.border, true: COLORS.secondary + '60' }}
+            thumbColor={isAnonymous ? COLORS.secondary : COLORS.textLight}
+          />
+        </View>
+      </ScrollView>
+
+      {/* Fixed footer button */}
+      <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={[styles.submitButton, submitting && { opacity: 0.7 }]}
+          onPress={handleSubmit}
+          disabled={submitting}
+          activeOpacity={0.85}
+        >
+          {submitting ? (
+            <ActivityIndicator color={COLORS.white} />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.submitText}>Beoordeling plaatsen</Text>
+              <MaterialCommunityIcons name="send" size={18} color={COLORS.white} />
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center: { justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 16, paddingBottom: 40 },
-  card: {
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: COLORS.surface,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
     elevation: 2,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
-  garageName: { fontSize: 18, fontWeight: '700', color: COLORS.primary },
-  serviceInfo: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
-  dateInfo: { fontSize: 14, color: COLORS.textSecondary, marginTop: 2 },
-  priceInfo: { fontSize: 15, fontWeight: '700', color: COLORS.primary, marginTop: 6 },
-  divider: { height: 1, backgroundColor: COLORS.border, marginVertical: 12 },
-  // Star selector
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    letterSpacing: -0.3,
+  },
+
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+
+  // Appointment summary card
+  summaryCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: COLORS.secondary + '15',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  summaryIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: COLORS.secondary + '12',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  garageName: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: COLORS.text,
+  },
+  serviceDate: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+  carInfo: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.secondary,
+    marginTop: 3,
+  },
+
+  // Ratings section
+  ratingsSection: {
+    marginBottom: 32,
+    gap: 20,
+  },
   starRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
-  starLabel: { fontSize: 15, fontWeight: '500', color: COLORS.text },
-  stars: { flexDirection: 'row', gap: 2 },
+  starLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  stars: { flexDirection: 'row', gap: 3 },
   starTouch: { padding: 2 },
-  // Overall calculated rating
-  overallRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+
+  // Average score box
+  averageBox: {
     alignItems: 'center',
-    paddingVertical: 12,
-    marginTop: 8,
-    borderTopWidth: 2,
-    borderTopColor: COLORS.primary,
-  },
-  overallLabel: { fontSize: 16, fontWeight: '700', color: COLORS.primary },
-  overallScore: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
-  // Comment
-  commentInput: {
-    height: 100,
+    justifyContent: 'center',
+    paddingVertical: 28,
+    backgroundColor: STAR_GOLD + '08',
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingTop: 12,
+    borderColor: STAR_GOLD + '30',
+    borderStyle: 'dashed',
+    marginBottom: 32,
+  },
+  averageScore: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: STAR_GOLD,
+    lineHeight: 62,
+  },
+  averageLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: STAR_GOLD + 'AA',
+    letterSpacing: 2.5,
+    marginTop: 6,
+  },
+
+  // Comment section
+  commentSection: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  commentInputWrapper: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  commentInput: {
+    minHeight: 120,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 30,
     fontSize: 15,
     color: COLORS.text,
-    backgroundColor: COLORS.background,
+    lineHeight: 22,
   },
-  charCount: { fontSize: 12, color: COLORS.textLight, textAlign: 'right', marginTop: 4 },
-  // Submit
-  submitButton: {
-    backgroundColor: COLORS.secondary,
+  charCount: {
+    position: 'absolute',
+    bottom: 10,
+    right: 14,
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.textLight,
+  },
+  commentBox: {
+    backgroundColor: COLORS.surface,
     borderRadius: 14,
     padding: 16,
-    alignItems: 'center',
-    marginTop: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  submitText: { color: COLORS.white, fontSize: 17, fontWeight: '700' },
-  // Existing review display
-  ratingDisplay: { alignItems: 'center', paddingVertical: 8 },
-  ratingBig: { fontSize: 40, fontWeight: '800', color: COLORS.text },
+  commentReadOnly: {
+    fontSize: 15,
+    color: COLORS.text,
+    lineHeight: 22,
+  },
+
+  // Category row (existing review)
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
   },
-  categoryLabel: { fontSize: 14, color: COLORS.textSecondary },
-  commentText: {
-    fontSize: 14,
+  categoryLabel: {
+    fontSize: 16,
+    fontWeight: '700',
     color: COLORS.text,
-    fontStyle: 'italic',
-    lineHeight: 20,
+  },
+
+  // Anonymous toggle
+  anonymousRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  anonymousLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  anonymousHint: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    marginTop: 2,
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: COLORS.background,
+  },
+  submitButton: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 999,
+    paddingVertical: 18,
+    alignItems: 'center',
+    shadowColor: COLORS.secondary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  submitText: {
+    color: COLORS.white,
+    fontSize: 17,
+    fontWeight: '800',
   },
 });

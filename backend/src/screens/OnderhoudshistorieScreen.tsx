@@ -7,88 +7,20 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SERVICE_LABELS } from '../constants';
-import { ServiceCategory } from '../types';
+import { ServiceCategory, Car } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchMaintenanceHistory,
   fetchMaintenanceForCar,
+  fetchUserCars,
 } from '../services/garageService';
-
-// ============================================
-// MOCK DATA (shown when no real records exist)
-// ============================================
-const MOCK_RECORDS = [
-  {
-    id: 'mock-1',
-    service_date: '2024-01-12',
-    mileage: 124500,
-    work_description: 'Olie & filters vervangen\nRemvloeistof gecontroleerd\nBanden geroteerd',
-    next_apk_date: '2025-03-28',
-    car_brand: 'BMW',
-    car_model: '3 Serie',
-    car_year: 2021,
-    car_license_plate: '1-ABC-123',
-    garages: { name: 'Garage Janssen', city: 'Amsterdam' },
-    bookings: { garage_services: { name: 'Grote beurt', category: 'major_service' } },
-  },
-  {
-    id: 'mock-2',
-    service_date: '2023-11-15',
-    mileage: 118200,
-    work_description: 'Winterbanden gemonteerd\nWieluitlijning gecontroleerd',
-    next_apk_date: null,
-    car_brand: 'BMW',
-    car_model: '3 Serie',
-    car_year: 2021,
-    car_license_plate: '1-ABC-123',
-    garages: { name: 'KwikFit', city: 'Utrecht' },
-    bookings: { garage_services: { name: 'Bandenwissel', category: 'tire_change' } },
-  },
-  {
-    id: 'mock-3',
-    service_date: '2023-05-05',
-    mileage: 105000,
-    work_description: 'Olie vervangen\nLuchtfilter vervangen\nRemmen gecontroleerd',
-    next_apk_date: null,
-    car_brand: 'BMW',
-    car_model: '3 Serie',
-    car_year: 2021,
-    car_license_plate: '1-ABC-123',
-    garages: { name: 'Dealer BMW', city: 'Amsterdam' },
-    bookings: { garage_services: { name: 'Kleine beurt', category: 'small_service' } },
-  },
-  {
-    id: 'mock-4',
-    service_date: '2022-12-20',
-    mileage: 92400,
-    work_description: 'APK keuring uitgevoerd\nUitlaatsysteem gecontroleerd\nVerlichting gecontroleerd',
-    next_apk_date: '2024-12-20',
-    car_brand: 'BMW',
-    car_model: '3 Serie',
-    car_year: 2021,
-    car_license_plate: '1-ABC-123',
-    garages: { name: 'Garage Janssen', city: 'Amsterdam' },
-    bookings: { garage_services: { name: 'APK Keuring', category: 'apk' } },
-  },
-  {
-    id: 'mock-5',
-    service_date: '2022-06-10',
-    mileage: 78000,
-    work_description: 'Airco bijgevuld\nPollen filter vervangen',
-    next_apk_date: null,
-    car_brand: 'BMW',
-    car_model: '3 Serie',
-    car_year: 2021,
-    car_license_plate: '1-ABC-123',
-    garages: { name: 'Airco Expert', city: 'Hilversum' },
-    bookings: { garage_services: { name: 'Airco-service', category: 'airco_service' } },
-  },
-];
 
 // ============================================
 // HELPERS
@@ -184,33 +116,56 @@ export default function OnderhoudshistorieScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const licensePlate: string | undefined = route.params?.licensePlate;
-  const carName: string | undefined = route.params?.carName;
+  const initialPlate: string | undefined = route.params?.licensePlate;
 
+  const [cars, setCars] = useState<Car[]>([]);
+  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [showCarPicker, setShowCarPicker] = useState(false);
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Load user's cars first, then select the right one
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const userCars = await fetchUserCars(user.id);
+        setCars(userCars);
+        // If a specific plate was passed (from Mijn Auto's), select that car
+        if (initialPlate) {
+          const match = userCars.find((c: Car) => c.license_plate === initialPlate);
+          setSelectedCar(match || userCars[0] || null);
+        } else {
+          // Default to the default car, or first car
+          const defaultCar = userCars.find((c: Car) => c.is_default);
+          setSelectedCar(defaultCar || userCars[0] || null);
+        }
+      } catch (err) {
+        console.error('Failed to load cars:', err);
+      }
+    })();
+  }, [user, initialPlate]);
+
   const loadRecords = useCallback(async () => {
     if (!user) return;
     try {
-      const data = licensePlate
-        ? await fetchMaintenanceForCar(user.id, licensePlate)
+      const data = selectedCar
+        ? await fetchMaintenanceForCar(user.id, selectedCar.license_plate)
         : await fetchMaintenanceHistory(user.id);
-      // Use mock data if no real records exist
-      setRecords(data.length > 0 ? data : MOCK_RECORDS);
+      setRecords(data);
     } catch (err) {
       console.error('Failed to load maintenance history:', err);
-      // Fallback to mock data on error
-      setRecords(MOCK_RECORDS);
+      setRecords([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user, licensePlate]);
+  }, [user, selectedCar]);
 
   useEffect(() => {
+    setLoading(true);
     loadRecords();
   }, [loadRecords]);
 
@@ -219,17 +174,22 @@ export default function OnderhoudshistorieScreen() {
     loadRecords();
   };
 
+  const handleSelectCar = (car: Car) => {
+    setSelectedCar(car);
+    setShowCarPicker(false);
+    setExpandedId(null);
+  };
+
   // Derived data
-  const carInfo = records.length > 0 ? records[0] : null;
-  const latestMileage = carInfo?.mileage || 0;
+  const latestMileage = selectedCar?.mileage || (records.length > 0 ? records[0]?.mileage : 0) || 0;
   const totalRecords = records.length;
   const nextApkDate = records.find((r) => r.next_apk_date)?.next_apk_date;
   const apkDaysLeft = nextApkDate ? daysUntil(nextApkDate) : null;
 
-  const displayCarName = carName || (carInfo ? `${carInfo.car_brand} ${carInfo.car_model || ''}`.trim() : 'Mijn Auto');
-  const displayPlate = licensePlate || carInfo?.car_license_plate || '';
-  const displayYear = carInfo?.car_year || '';
-  const displayCarType = carInfo?.car_model ? 'Sedan' : '';
+  const displayCarName = selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : 'Mijn Auto';
+  const displayPlate = selectedCar?.license_plate || '';
+  const displayYear = selectedCar?.year || '';
+  const carPhotoUrl = selectedCar?.photo_url || null;
 
   if (loading) {
     return (
@@ -256,25 +216,33 @@ export default function OnderhoudshistorieScreen() {
             <MaterialCommunityIcons name="chevron-left" size={24} color={COLORS.secondary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Onderhoudshistorie</Text>
-          <TouchableOpacity style={styles.headerBtnFilter} activeOpacity={0.7}>
-            <MaterialCommunityIcons name="tune-variant" size={20} color={COLORS.secondary} />
+          <TouchableOpacity
+            style={styles.headerBtnFilter}
+            activeOpacity={0.7}
+            onPress={() => cars.length > 1 && setShowCarPicker(true)}
+          >
+            <MaterialCommunityIcons name="car-select" size={20} color={COLORS.secondary} />
           </TouchableOpacity>
         </View>
 
         {/* Vehicle Profile Card */}
         <View style={styles.vehicleCard}>
           <View style={styles.vehicleCardTop}>
-            {/* Car image placeholder */}
+            {/* Car image */}
             <View style={styles.carImageWrapper}>
-              <View style={styles.carImage}>
-                <MaterialCommunityIcons name="car-side" size={36} color={COLORS.secondary} />
+              <View style={[styles.carImage, carPhotoUrl && styles.carImageWithPhoto]}>
+                {carPhotoUrl ? (
+                  <Image source={{ uri: carPhotoUrl }} style={styles.carImagePhoto} />
+                ) : (
+                  <MaterialCommunityIcons name="car-side" size={36} color={COLORS.secondary} />
+                )}
               </View>
               <View style={styles.statusDot} />
             </View>
             <View style={styles.carDetails}>
               <Text style={styles.carNameText}>{displayCarName}</Text>
               <Text style={styles.carTypeText}>
-                {displayCarType}{displayCarType && displayYear ? ' • ' : ''}{displayYear}
+                {displayYear ? `Bouwjaar ${displayYear}` : ''}
               </Text>
               {displayPlate ? (
                 <View style={{ marginTop: 8 }}>
@@ -434,6 +402,57 @@ export default function OnderhoudshistorieScreen() {
         {/* Bottom spacer */}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Car Picker Modal */}
+      <Modal
+        visible={showCarPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowCarPicker(false)}
+      >
+        <TouchableOpacity
+          style={styles.pickerOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCarPicker(false)}
+        />
+        <View style={[styles.pickerContent, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={styles.pickerHandle} />
+          <Text style={styles.pickerTitle}>Selecteer auto</Text>
+          {cars.map((car) => {
+            const isActive = selectedCar?.id === car.id;
+            return (
+              <TouchableOpacity
+                key={car.id}
+                style={[styles.pickerItem, isActive && styles.pickerItemActive]}
+                onPress={() => handleSelectCar(car)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.pickerCarIcon, car.photo_url && styles.pickerCarIconPhoto]}>
+                  {car.photo_url ? (
+                    <Image source={{ uri: car.photo_url }} style={styles.pickerCarImage} />
+                  ) : (
+                    <MaterialCommunityIcons name="car" size={22} color={isActive ? COLORS.secondary : COLORS.textLight} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.pickerCarName, isActive && { color: COLORS.secondary }]}>
+                    {car.brand} {car.model}
+                  </Text>
+                  <Text style={styles.pickerCarPlate}>{car.license_plate}</Text>
+                </View>
+                {car.is_default && (
+                  <View style={styles.pickerDefaultBadge}>
+                    <Text style={styles.pickerDefaultText}>STANDAARD</Text>
+                  </View>
+                )}
+                {isActive && (
+                  <MaterialCommunityIcons name="check-circle" size={22} color={COLORS.secondary} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -533,6 +552,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: COLORS.secondary + '20',
+    overflow: 'hidden',
+  },
+  carImageWithPhoto: {
+    backgroundColor: COLORS.border,
+  },
+  carImagePhoto: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   statusDot: {
     position: 'absolute',
@@ -802,5 +830,86 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: 6,
     textAlign: 'center',
+  },
+
+  // Car Picker Modal
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  pickerContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+  },
+  pickerHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.border,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  pickerTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.text,
+    marginBottom: 16,
+  },
+  pickerItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 8,
+    backgroundColor: COLORS.background,
+    gap: 12,
+  },
+  pickerItemActive: {
+    backgroundColor: COLORS.secondary + '10',
+    borderWidth: 1,
+    borderColor: COLORS.secondary + '30',
+  },
+  pickerCarIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  pickerCarIconPhoto: {
+    backgroundColor: 'transparent',
+  },
+  pickerCarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  pickerCarName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  pickerCarPlate: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: COLORS.textLight,
+    marginTop: 2,
+  },
+  pickerDefaultBadge: {
+    backgroundColor: COLORS.secondary + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  pickerDefaultText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: COLORS.secondary,
+    letterSpacing: 0.5,
   },
 });

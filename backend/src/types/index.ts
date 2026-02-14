@@ -163,6 +163,7 @@ export interface Review {
   service_quality: number; // 1-5
   honesty: number;         // 1-5
   speed: number;           // 1-5
+  is_anonymous: boolean;
   created_at: string;
   user?: Pick<User, 'full_name' | 'avatar_url'>;
 }
