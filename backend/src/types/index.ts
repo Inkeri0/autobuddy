@@ -34,6 +34,7 @@ export interface Garage {
   email?: string;
   website?: string;
   logo_url?: string;
+  wallpaper_url?: string;
   photos: string[];
   specializations: string[];
   brands_serviced: string[];
@@ -177,6 +178,8 @@ export interface Car {
   year: number;
   license_plate: string;
   mileage?: number;
+  apk_date?: string;    // YYYY-MM-DD from RDW vervaldatum_apk
+  fuel_type?: string;   // e.g. "Benzine", "Diesel", "LPG"
   photo_url?: string;
   is_default: boolean;
   created_at: string;

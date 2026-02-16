@@ -241,6 +241,8 @@ export async function createCar(car: {
   year: number;
   license_plate: string;
   mileage?: number;
+  apk_date?: string;
+  fuel_type?: string;
   photo_url?: string;
   is_default?: boolean;
 }) {
@@ -260,6 +262,8 @@ export async function updateCar(carId: string, updates: {
   year?: number;
   license_plate?: string;
   mileage?: number;
+  apk_date?: string;
+  fuel_type?: string;
   photo_url?: string;
 }) {
   const { data, error } = await supabase

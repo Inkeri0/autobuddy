@@ -8,6 +8,7 @@ import {
   Linking,
   ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -85,19 +86,39 @@ export default function GarageDetailScreen() {
       >
         {/* Hero Section */}
         <View style={[styles.hero, { height: HERO_HEIGHT }]}>
-          {/* Placeholder image background */}
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.primaryLight, '#7c5caa']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroGradientBg}
-          >
-            <MaterialCommunityIcons
-              name="garage-open-variant"
-              size={100}
-              color="rgba(255,255,255,0.15)"
-            />
-          </LinearGradient>
+          {garage.wallpaper_url ? (
+            <>
+              <Image
+                source={{ uri: garage.wallpaper_url }}
+                style={styles.heroWallpaper}
+              />
+              {/* Dark overlay for readability */}
+              <View style={styles.heroOverlay} />
+            </>
+          ) : (
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.primaryLight, '#7c5caa']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.heroGradientBg}
+            >
+              <MaterialCommunityIcons
+                name="garage-open-variant"
+                size={100}
+                color="rgba(255,255,255,0.15)"
+              />
+            </LinearGradient>
+          )}
+
+          {/* Logo badge */}
+          {garage.logo_url && (
+            <View style={styles.heroLogoBadge}>
+              <Image
+                source={{ uri: garage.logo_url }}
+                style={styles.heroLogo}
+              />
+            </View>
+          )}
 
           {/* Bottom fade to background */}
           <LinearGradient
@@ -327,6 +348,38 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  heroWallpaper: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  } as any,
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  heroLogoBadge: {
+    position: 'absolute',
+    bottom: 56,
+    alignSelf: 'center',
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  heroLogo: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
   },
   heroBottomFade: {
     position: 'absolute',

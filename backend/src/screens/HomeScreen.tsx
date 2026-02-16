@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Image,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -57,6 +58,7 @@ export default function HomeScreen() {
   const { garages, loading: garagesLoading } = useGarages();
   const [bookings, setBookings] = useState<any[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const firstName = user?.user_metadata?.full_name?.split(' ')[0] || '';
   const avatarUrl = user?.user_metadata?.avatar_url || null;
@@ -78,6 +80,20 @@ export default function HomeScreen() {
     }
   }, [user?.id]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      if (user?.id) {
+        const data = await fetchUserBookings(user.id);
+        setBookings(data);
+      }
+    } catch (err) {
+      console.error('Refresh failed:', err);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [user?.id]);
+
   const handleServicePress = (category: ServiceCategory) => {
     navigation.navigate('Search', { serviceCategory: category });
   };
@@ -88,7 +104,21 @@ export default function HomeScreen() {
     .sort((a, b) => a.date.localeCompare(b.date))[0];
 
   return (
-    <ScrollView style={styles.container} bounces={false}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={{ flexGrow: 1 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={COLORS.white}
+          title="Vernieuwen..."
+          titleColor={COLORS.white}
+          colors={[COLORS.primary]}
+          progressBackgroundColor={COLORS.white}
+        />
+      }
+    >
       {/* Purple Gradient Header */}
       <LinearGradient
         colors={[COLORS.primary, COLORS.primaryLight, '#7c5caa']}
@@ -120,20 +150,22 @@ export default function HomeScreen() {
         </View>
       </LinearGradient>
 
-      {/* Floating Search Bar */}
-      <View style={styles.searchWrapper}>
-        <TouchableOpacity
-          style={styles.searchBar}
-          onPress={() => navigation.navigate('Search')}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textLight} />
-          <Text style={styles.searchPlaceholder}>Zoek een garage in de buurt...</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Content below header with light background */}
+      <View style={styles.belowHeader}>
+        {/* Floating Search Bar */}
+        <View style={styles.searchWrapper}>
+          <TouchableOpacity
+            style={styles.searchBar}
+            onPress={() => navigation.navigate('Search')}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textLight} />
+            <Text style={styles.searchPlaceholder}>Zoek een garage in de buurt...</Text>
+          </TouchableOpacity>
+        </View>
 
-      {/* Content */}
-      <View style={styles.content}>
+        {/* Content */}
+        <View style={styles.content}>
         {/* Services Grid */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Onze Services</Text>
@@ -255,6 +287,7 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </TouchableOpacity>
+        </View>
       </View>
     </ScrollView>
   );
@@ -262,6 +295,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+  },
+  belowHeader: {
     flex: 1,
     backgroundColor: COLORS.background,
   },

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -110,9 +111,13 @@ export default function FavorieteGaragesScreen() {
         activeOpacity={0.97}
       >
         <View style={styles.cardRow}>
-          {/* Image placeholder */}
+          {/* Garage logo or fallback icon */}
           <View style={styles.cardImage}>
-            <MaterialCommunityIcons name="garage" size={32} color={COLORS.primary} />
+            {garage.logo_url ? (
+              <Image source={{ uri: garage.logo_url }} style={styles.cardLogo} />
+            ) : (
+              <MaterialCommunityIcons name="garage" size={32} color={COLORS.primary} />
+            )}
           </View>
 
           <View style={styles.cardInfo}>
@@ -328,6 +333,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '08',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  cardLogo: {
+    width: 96,
+    height: 96,
+    borderRadius: 14,
   },
   cardInfo: {
     flex: 1,

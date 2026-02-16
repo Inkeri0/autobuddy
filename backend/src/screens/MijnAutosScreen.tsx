@@ -38,6 +38,8 @@ interface CarForm {
   year: string;
   license_plate: string;
   mileage: string;
+  apk_date: string;
+  fuel_type: string;
 }
 
 const EMPTY_FORM: CarForm = {
@@ -46,6 +48,8 @@ const EMPTY_FORM: CarForm = {
   year: '',
   license_plate: '',
   mileage: '',
+  apk_date: '',
+  fuel_type: '',
 };
 
 /* ── Dutch license plate component ─────────────────────────── */
@@ -110,6 +114,7 @@ export default function MijnAutosScreen() {
   const [editingCarId, setEditingCarId] = useState<string | null>(null);
   const [form, setForm] = useState<CarForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState<string | null>(null); // carId being uploaded
 
@@ -198,6 +203,65 @@ export default function MijnAutosScreen() {
     loadCars();
   };
 
+  const lookupRdw = async (plate: string) => {
+    const cleaned = plate.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (cleaned.length < 4) return;
+
+    setLookingUp(true);
+    try {
+      // Fetch vehicle data and fuel type in parallel
+      const [res, fuelRes] = await Promise.all([
+        fetch(`https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=${cleaned}`),
+        fetch(`https://opendata.rdw.nl/resource/8ys7-d773.json?kenteken=${cleaned}`),
+      ]);
+      const data = await res.json();
+      const fuelData = await fuelRes.json();
+      if (data && data.length > 0) {
+        const car = data[0];
+        const brand = car.merk
+          ? car.merk.charAt(0) + car.merk.slice(1).toLowerCase()
+          : '';
+        let rawModel = car.handelsbenaming || '';
+        // Strip brand from model if it starts with it (e.g. "AUDI A3" → "A3")
+        if (car.merk && rawModel.toUpperCase().startsWith(car.merk.toUpperCase())) {
+          rawModel = rawModel.substring(car.merk.length).trim();
+        }
+        const model = rawModel
+          ? rawModel
+              .split(' ')
+              .map((w: string) => w.charAt(0) + w.slice(1).toLowerCase())
+              .join(' ')
+          : '';
+        const year = car.datum_eerste_toelating
+          ? car.datum_eerste_toelating.substring(0, 4)
+          : '';
+        // Parse APK expiry: "20270126" → "2027-01-26"
+        const rawApk = car.vervaldatum_apk || '';
+        const apkDate = rawApk.length === 8
+          ? `${rawApk.substring(0, 4)}-${rawApk.substring(4, 6)}-${rawApk.substring(6, 8)}`
+          : '';
+        // Fuel type from linked dataset
+        const fuelType = fuelData?.[0]?.brandstof_omschrijving || '';
+
+        setForm((prev) => ({
+          ...prev,
+          brand: brand || prev.brand,
+          model: model || prev.model,
+          year: year || prev.year,
+          apk_date: apkDate || prev.apk_date,
+          fuel_type: fuelType || prev.fuel_type,
+        }));
+      } else {
+        Alert.alert('Niet gevonden', 'Geen voertuig gevonden met dit kenteken.');
+      }
+    } catch (err) {
+      console.error('RDW lookup failed:', err);
+      Alert.alert('Fout', 'Kon voertuiggegevens niet ophalen.');
+    } finally {
+      setLookingUp(false);
+    }
+  };
+
   const openAddForm = () => {
     setForm(EMPTY_FORM);
     setEditingCarId(null);
@@ -212,6 +276,8 @@ export default function MijnAutosScreen() {
       year: String(car.year),
       license_plate: car.license_plate,
       mileage: car.mileage ? String(car.mileage) : '',
+      apk_date: car.apk_date || '',
+      fuel_type: car.fuel_type || '',
     });
     setEditingCarId(car.id);
     setPhotoUri(car.photo_url || null);
@@ -248,6 +314,8 @@ export default function MijnAutosScreen() {
           year: yearNum,
           license_plate: form.license_plate.trim().toUpperCase(),
           mileage: form.mileage ? parseInt(form.mileage, 10) : undefined,
+          apk_date: form.apk_date || undefined,
+          fuel_type: form.fuel_type || undefined,
         });
       } else {
         const newCar = await createCar({
@@ -257,6 +325,8 @@ export default function MijnAutosScreen() {
           year: yearNum,
           license_plate: form.license_plate.trim().toUpperCase(),
           mileage: form.mileage ? parseInt(form.mileage, 10) : undefined,
+          apk_date: form.apk_date || undefined,
+          fuel_type: form.fuel_type || undefined,
           is_default: cars.length === 0,
         });
         carId = newCar.id;
@@ -541,6 +611,38 @@ export default function MijnAutosScreen() {
                 )}
               </TouchableOpacity>
 
+              {/* License plate + RDW lookup */}
+              <Text style={styles.inputLabel}>Kenteken</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
+                  placeholder="bijv. H915BX"
+                  placeholderTextColor={COLORS.textLight}
+                  value={form.license_plate}
+                  onChangeText={(v) => setForm({ ...form, license_plate: v })}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.rdwButton,
+                    lookingUp && { opacity: 0.7 },
+                  ]}
+                  onPress={() => lookupRdw(form.license_plate)}
+                  disabled={lookingUp || form.license_plate.replace(/[^A-Za-z0-9]/g, '').length < 4}
+                  activeOpacity={0.8}
+                >
+                  {lookingUp ? (
+                    <ActivityIndicator size="small" color={COLORS.white} />
+                  ) : (
+                    <>
+                      <MaterialCommunityIcons name="magnify" size={18} color={COLORS.white} />
+                      <Text style={styles.rdwButtonText}>Zoek</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* Auto-filled fields */}
               <TextInput
                 style={styles.input}
                 placeholder="Merk (bijv. BMW)"
@@ -548,14 +650,14 @@ export default function MijnAutosScreen() {
                 value={form.brand}
                 onChangeText={(v) => setForm({ ...form, brand: v })}
               />
-              <TextInput
-                style={styles.input}
-                placeholder="Model (bijv. 3 Serie)"
-                placeholderTextColor={COLORS.textLight}
-                value={form.model}
-                onChangeText={(v) => setForm({ ...form, model: v })}
-              />
               <View style={{ flexDirection: 'row', gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder="Model (bijv. 3 Serie)"
+                  placeholderTextColor={COLORS.textLight}
+                  value={form.model}
+                  onChangeText={(v) => setForm({ ...form, model: v })}
+                />
                 <TextInput
                   style={[styles.input, { flex: 1 }]}
                   placeholder="Bouwjaar"
@@ -564,14 +666,6 @@ export default function MijnAutosScreen() {
                   onChangeText={(v) => setForm({ ...form, year: v })}
                   keyboardType="number-pad"
                   maxLength={4}
-                />
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  placeholder="Kenteken"
-                  placeholderTextColor={COLORS.textLight}
-                  value={form.license_plate}
-                  onChangeText={(v) => setForm({ ...form, license_plate: v })}
-                  autoCapitalize="characters"
                 />
               </View>
               <TextInput
@@ -900,6 +994,29 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
+  },
+
+  // RDW lookup
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    marginBottom: 6,
+  },
+  rdwButton: {
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.secondary,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    gap: 6,
+  },
+  rdwButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.white,
   },
 
   // Empty state

@@ -46,6 +46,56 @@ function formatMileage(km: number): string {
   return km.toLocaleString('nl-NL');
 }
 
+/**
+ * Dutch APK interval rules:
+ * - Benzine after 2005: first at 4yr, then 2×2yr, then yearly
+ * - Diesel/LPG/CNG after 2005: first at 3yr, then yearly
+ * - Pre-2005: always yearly
+ * - Oldtimer (50+ yr): exempt
+ *
+ * Returns the estimated last-inspection date, or null if no APK has been done yet.
+ */
+function getLastApkDate(expiryDate: string, registrationYear: number, fuelType?: string): string | null {
+  const expiry = new Date(expiryDate + 'T00:00:00');
+  const expiryYear = expiry.getFullYear();
+  const carAge = expiryYear - registrationYear;
+  const currentYear = new Date().getFullYear();
+
+  // Oldtimer (50+ years): exempt from APK
+  if (currentYear - registrationYear >= 50) return null;
+
+  // Pre-2005: always 1-year interval
+  if (registrationYear < 2005) {
+    const last = new Date(expiry);
+    last.setFullYear(last.getFullYear() - 1);
+    return last.toISOString().split('T')[0];
+  }
+
+  // Diesel / LPG / CNG after 2005
+  const isDieselOrGas = fuelType && ['diesel', 'lpg', 'cng'].some(
+    (f) => fuelType.toLowerCase().includes(f),
+  );
+  if (isDieselOrGas) {
+    if (carAge <= 3) return null; // initial period, no APK done yet
+    const last = new Date(expiry);
+    last.setFullYear(last.getFullYear() - 1);
+    return last.toISOString().split('T')[0];
+  }
+
+  // Benzine (default) after 2005
+  if (carAge <= 4) return null; // initial period, no APK done yet
+  if (carAge <= 8) {
+    // 2-year interval (two cycles: age 4→6 and 6→8)
+    const last = new Date(expiry);
+    last.setFullYear(last.getFullYear() - 2);
+    return last.toISOString().split('T')[0];
+  }
+  // After age 8: yearly
+  const last = new Date(expiry);
+  last.setFullYear(last.getFullYear() - 1);
+  return last.toISOString().split('T')[0];
+}
+
 function getServiceLabel(record: any): string {
   const category = record.bookings?.garage_services?.category;
   if (category && SERVICE_LABELS[category as ServiceCategory]) {
@@ -166,11 +216,25 @@ export default function OnderhoudshistorieScreen() {
 
   useEffect(() => {
     setLoading(true);
+    setRecords([]); // Clear stale records when car changes
     loadRecords();
   }, [loadRecords]);
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
+    // Re-fetch car data so mileage is up to date (garage may have updated it)
+    if (user) {
+      try {
+        const userCars = await fetchUserCars(user.id);
+        setCars(userCars);
+        if (selectedCar) {
+          const updated = userCars.find((c: Car) => c.id === selectedCar.id);
+          if (updated) setSelectedCar(updated);
+        }
+      } catch (err) {
+        console.error('Failed to refresh cars:', err);
+      }
+    }
     loadRecords();
   };
 
@@ -183,8 +247,25 @@ export default function OnderhoudshistorieScreen() {
   // Derived data
   const latestMileage = selectedCar?.mileage || (records.length > 0 ? records[0]?.mileage : 0) || 0;
   const totalRecords = records.length;
-  const nextApkDate = records.find((r) => r.next_apk_date)?.next_apk_date;
+  const nextApkDate = records.find((r) => r.next_apk_date)?.next_apk_date || selectedCar?.apk_date;
   const apkDaysLeft = nextApkDate ? daysUntil(nextApkDate) : null;
+
+  // Build combined timeline: real records + synthetic last-APK entry
+  const timelineItems: any[] = [...records];
+  if (nextApkDate && selectedCar) {
+    const lastApkStr = getLastApkDate(nextApkDate, selectedCar.year, selectedCar.fuel_type);
+    if (lastApkStr) {
+      timelineItems.push({
+        id: '__apk__',
+        _isApk: true,
+        service_date: lastApkStr,
+        _apkExpiry: nextApkDate,
+        work_description: null,
+      });
+    }
+  }
+  // Sort descending by date (newest first)
+  timelineItems.sort((a, b) => b.service_date.localeCompare(a.service_date));
 
   const displayCarName = selectedCar ? `${selectedCar.brand} ${selectedCar.model}` : 'Mijn Auto';
   const displayPlate = selectedCar?.license_plate || '';
@@ -296,16 +377,67 @@ export default function OnderhoudshistorieScreen() {
             </Text>
           </View>
         </View>
-
         {/* Timeline */}
-        {records.length > 0 ? (
+        {timelineItems.length > 0 ? (
           <View style={styles.timeline}>
             {/* Vertical line */}
             <View style={styles.timelineLine} />
 
-            {records.map((item, index) => {
+            {timelineItems.map((item, index) => {
               const isFirst = index === 0;
+              const isApk = item._isApk === true;
               const isExpanded = expandedId === item.id;
+
+              // APK timeline entry (last inspection)
+              if (isApk) {
+                return (
+                  <View key={item.id} style={[styles.timelineItem, !isFirst && { opacity: 0.92 }]}>
+                    <View style={styles.dotContainer}>
+                      {isFirst ? (
+                        <View style={styles.dotPrimaryOuter}>
+                          <View style={styles.dotPrimaryInner}>
+                            <View style={styles.dotPrimaryCore} />
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={styles.dotSecondary}>
+                          <View style={styles.dotSecondaryCore} />
+                        </View>
+                      )}
+                    </View>
+                    <View
+                      style={[
+                        styles.timelineCard,
+                        isFirst && styles.timelineCardFirst,
+                      ]}
+                    >
+                      <View style={styles.cardHeaderRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.cardDate, isFirst && styles.cardDateFirst]}>
+                            {formatDateShort(item.service_date)}
+                          </Text>
+                          <Text style={styles.cardServiceName}>APK Keuring</Text>
+                        </View>
+                        <MaterialCommunityIcons name="shield-car" size={22} color={COLORS.secondary} />
+                      </View>
+                      <View style={styles.cardInfoRow}>
+                        <View style={styles.cardInfoItem}>
+                          <MaterialCommunityIcons name="check-decagram" size={16} color={COLORS.success} />
+                          <Text style={styles.cardInfoBold}>Goedgekeurd</Text>
+                        </View>
+                        <View style={styles.cardInfoItem}>
+                          <MaterialCommunityIcons name="calendar-clock" size={16} color={COLORS.textLight} />
+                          <Text style={styles.cardInfoText}>
+                            Geldig t/m {formatDateShort(item._apkExpiry)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                );
+              }
+
+              // Regular maintenance record
               const garageName = item.garages?.name || 'Onbekende garage';
               const garageCity = item.garages?.city || '';
               const workItems = item.work_description
@@ -651,7 +783,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.textSecondary,
   },
-
   // Timeline
   timeline: {
     position: 'relative',

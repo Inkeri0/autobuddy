@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -141,9 +142,13 @@ export default function SearchScreen() {
         activeOpacity={0.97}
       >
         <View style={styles.cardRow}>
-          {/* Image placeholder */}
+          {/* Garage logo or fallback icon */}
           <View style={styles.cardImage}>
-            <MaterialCommunityIcons name="garage" size={32} color={COLORS.primary} />
+            {item.logo_url ? (
+              <Image source={{ uri: item.logo_url }} style={styles.cardLogo} />
+            ) : (
+              <MaterialCommunityIcons name="garage" size={32} color={COLORS.primary} />
+            )}
           </View>
 
           <View style={styles.cardInfo}>
@@ -518,6 +523,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '08',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  cardLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
   },
   cardInfo: {
     flex: 1,
