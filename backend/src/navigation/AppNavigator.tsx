@@ -106,7 +106,7 @@ export default function AppNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', color: '#fff' }}>AutoBuddy</Text>
+        <Text style={{ fontSize: 28, fontWeight: '700', color: '#fff' }}>CarWise</Text>
         <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
       </View>
     );

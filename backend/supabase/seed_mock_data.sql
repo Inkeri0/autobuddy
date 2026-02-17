@@ -1,5 +1,5 @@
 -- ============================================
--- AutoBuddy - Mock Garage Seed Data
+-- CarWise - Mock Garage Seed Data
 -- Run this in Supabase SQL Editor
 -- ============================================
 

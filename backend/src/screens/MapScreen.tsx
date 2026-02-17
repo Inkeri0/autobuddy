@@ -10,13 +10,14 @@ import {
   Animated,
   PanResponder,
   Platform,
+  Image,
 } from 'react-native';
 import ClusteredMapView from 'react-native-map-clustering';
 import { Marker, Callout, type Region } from 'react-native-maps';
 import { useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, AVAILABILITY_COLORS, MAASTRICHT_MAP_REGION } from '../constants';
+import { COLORS, AVAILABILITY_COLORS, DEFAULT_MAP_REGION } from '../constants';
 import { AvailabilityStatus } from '../types';
 import { useGarages } from '../hooks/useGarages';
 import { fetchBookingCountsByDate } from '../services/garageService';
@@ -238,7 +239,7 @@ export default function MapScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { garages, loading } = useGarages();
-  const [region, setRegion] = useState<Region>(MAASTRICHT_MAP_REGION);
+  const [region, setRegion] = useState<Region>(DEFAULT_MAP_REGION);
   const mapRef = useRef<any>(null);
 
   const [selectedChip, setSelectedChip] = useState('today');
@@ -300,7 +301,7 @@ export default function MapScreen() {
   }, [navigation]);
 
   const handleMyLocation = useCallback(() => {
-    mapRef.current?.animateToRegion(MAASTRICHT_MAP_REGION, 500);
+    mapRef.current?.animateToRegion(DEFAULT_MAP_REGION, 500);
   }, []);
 
   return (
@@ -314,7 +315,7 @@ export default function MapScreen() {
       ) : (
         <ClusteredMapView
           style={StyleSheet.absoluteFillObject}
-          initialRegion={MAASTRICHT_MAP_REGION}
+          initialRegion={DEFAULT_MAP_REGION}
           onRegionChangeComplete={handleRegionChangeComplete}
           clusterColor={COLORS.primary}
           clusterTextColor={COLORS.white}
@@ -458,13 +459,20 @@ export default function MapScreen() {
                   activeOpacity={0.95}
                 >
                   <View style={styles.cardRow}>
-                    {/* Image placeholder */}
+                    {/* Garage logo or placeholder */}
                     <View style={styles.cardImage}>
-                      <MaterialCommunityIcons
-                        name="garage"
-                        size={28}
-                        color={isClosed ? COLORS.textLight : COLORS.primary}
-                      />
+                      {garage.logo_url ? (
+                        <Image
+                          source={{ uri: garage.logo_url }}
+                          style={styles.cardLogo}
+                        />
+                      ) : (
+                        <MaterialCommunityIcons
+                          name="garage"
+                          size={28}
+                          color={isClosed ? COLORS.textLight : COLORS.primary}
+                        />
+                      )}
                       {!isClosed && (
                         <View style={[
                           styles.availDot,
@@ -737,6 +745,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+    overflow: 'hidden',
+  },
+  cardLogo: {
+    width: 80,
+    height: 80,
+    borderRadius: 16,
   },
   availDot: {
     position: 'absolute',

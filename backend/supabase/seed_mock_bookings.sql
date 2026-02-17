@@ -1,5 +1,5 @@
 -- ============================================================
--- AutoBuddy: Mock Bookings Seed Data
+-- CarWise: Mock Bookings Seed Data
 -- Run in Supabase SQL Editor to populate dynamic map pin colors
 -- Pin thresholds: 0-2 = green, 3-5 = orange, 6+ = red
 -- ============================================================

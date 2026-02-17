@@ -243,7 +243,7 @@ export default function ProfileScreen() {
 
       {/* Version */}
       <Text style={styles.version}>
-        AutoBuddy v2.4.0 {'\u2022'} Gemaakt met passie
+        CarWise v2.4.0 {'\u2022'} Gemaakt met passie
       </Text>
     </ScrollView>
   );

@@ -1,5 +1,5 @@
 -- ============================================
--- AutoBuddy - Database Schema (Lovable-compatible)
+-- CarWise - Database Schema (Lovable-compatible)
 -- Drops existing tables and recreates with ENUMs
 -- ============================================
 

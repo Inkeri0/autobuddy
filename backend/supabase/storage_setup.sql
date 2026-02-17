@@ -1,5 +1,5 @@
 -- ============================================
--- AutoBuddy - Storage Bucket Setup
+-- CarWise - Storage Bucket Setup
 -- Run this in the Supabase SQL Editor
 -- ============================================
 

@@ -61,7 +61,7 @@ export default function LoginScreen() {
           <View style={styles.logoContainer}>
             <MaterialCommunityIcons name="car-wrench" size={48} color={COLORS.white} />
           </View>
-          <Text style={styles.logo}>AutoBuddy</Text>
+          <Text style={styles.logo}>CarWise</Text>
           <Text style={styles.subtitle}>
             Jouw slimme auto- & garage assistent
           </Text>

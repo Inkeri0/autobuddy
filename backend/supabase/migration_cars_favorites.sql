@@ -1,5 +1,5 @@
 -- ============================================
--- AutoBuddy - Migration: Cars & Favorites tables
+-- CarWise - Migration: Cars & Favorites tables
 -- Run this in the Supabase SQL Editor
 -- ============================================
 

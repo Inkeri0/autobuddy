@@ -1,8 +1,8 @@
-# AutoBuddy - Project Plan & Documentation
+# CarWise - Project Plan & Documentation
 
 ## Overview
 
-AutoBuddy is an AI-driven auto & garage platform combining the functionality of AutoScout, Google Maps, and a smart AI assistant. Built with **React Native (Expo)** and **Supabase**.
+CarWise is an AI-driven auto & garage platform combining the functionality of AutoScout, Google Maps, and a smart AI assistant. Built with **React Native (Expo)** and **Supabase**.
 
 Users can find garages for maintenance, search for cars, upload photos for AI recognition, book appointments, and get intelligent pricing and maintenance advice - all from one app for iOS and Android.
 
@@ -96,7 +96,7 @@ Users can find garages for maintenance, search for cars, upload photos for AI re
 
 ### Phase 5 - Smart AI Features & Price Intelligence
 
-**Goal:** AI becomes a true "AutoBuddy" assistant.
+**Goal:** AI becomes a true "CarWise" assistant.
 
 **Status:** `NOT STARTED`
 

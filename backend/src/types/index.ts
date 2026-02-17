@@ -1,5 +1,5 @@
 // ============================================
-// AutoBuddy - Core Type Definitions
+// CarWise - Core Type Definitions
 // ============================================
 
 // --- User Types ---

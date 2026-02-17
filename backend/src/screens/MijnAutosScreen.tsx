@@ -538,7 +538,7 @@ export default function MijnAutosScreen() {
                 </TouchableOpacity>
               )}
               {isTab && <View style={{ width: 8 }} />}
-              <Text style={styles.brandingText}>AUTOBUDDY</Text>
+              <Text style={styles.brandingText}>CARWISE</Text>
               <View style={{ width: isTab ? 8 : 40 }} />
             </View>
             <Text style={styles.pageTitle}>Mijn auto's</Text>
