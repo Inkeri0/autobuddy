@@ -143,6 +143,10 @@ export default function ProfileScreen() {
   const handlePress = (key: string) => {
     if (key === 'notifications' || key === 'settings' || key === 'help') {
       Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.');
+    } else if (key === 'MijnAfspraken') {
+      navigation.navigate('MainTabs', { screen: 'Afspraken' });
+    } else if (key === 'MijnAutos') {
+      navigation.navigate('MainTabs', { screen: 'MijnAuto' });
     } else {
       navigation.navigate(key);
     }
@@ -243,7 +247,7 @@ export default function ProfileScreen() {
 
       {/* Version */}
       <Text style={styles.version}>
-        CarWise v2.4.0 {'\u2022'} Gemaakt met passie
+        CarYe v2.4.0 {'\u2022'} Gemaakt met passie
       </Text>
     </ScrollView>
   );

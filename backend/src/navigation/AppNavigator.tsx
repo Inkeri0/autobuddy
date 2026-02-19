@@ -106,7 +106,7 @@ export default function AppNavigator() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.primary }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', color: '#fff' }}>CarWise</Text>
+        <Text style={{ fontSize: 28, fontWeight: '700', color: '#fff' }}>CarYe</Text>
         <ActivityIndicator color="#fff" style={{ marginTop: 16 }} />
       </View>
     );
@@ -154,17 +154,7 @@ export default function AppNavigator() {
               component={BookingScreen}
               options={{ headerShown: false }}
             />
-            <Stack.Screen
-              name="MijnAfspraken"
-              component={MijnAfsprakenScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="MijnAutos"
-              component={MijnAutosScreen}
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
+<Stack.Screen
               name="FavorieteGarages"
               component={FavorieteGaragesScreen}
               options={{ headerShown: false }}

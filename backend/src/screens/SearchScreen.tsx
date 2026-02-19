@@ -123,9 +123,9 @@ export default function SearchScreen() {
 
   const handleTabPress = (key: string) => {
     if (key === 'Map') {
-      navigation.navigate('Map');
+      navigation.replace('Map');
     } else {
-      navigation.navigate('MainTabs', { screen: key });
+      navigation.goBack();
     }
   };
 

@@ -320,6 +320,8 @@ export default function MapScreen() {
           clusterColor={COLORS.primary}
           clusterTextColor={COLORS.white}
           radius={40}
+          animationEnabled={false}
+          preserveClusterPressBehavior
           mapRef={(ref: any) => { mapRef.current = ref; }}
           showsUserLocation
           showsMyLocationButton={false}
@@ -337,7 +339,7 @@ export default function MapScreen() {
                   longitude: garage.longitude,
                 }}
                 onPress={() => handleMarkerPress(garage.id)}
-                tracksViewChanges={false}
+                tracksViewChanges={Platform.OS === 'ios'}
               >
                 <View style={isSelected ? { transform: [{ scale: 1.2 }] } : undefined}>
                   <GarageMarker status={status} />

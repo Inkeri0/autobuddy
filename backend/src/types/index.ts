@@ -1,5 +1,5 @@
 // ============================================
-// CarWise - Core Type Definitions
+// CarYe - Core Type Definitions
 // ============================================
 
 // --- User Types ---
