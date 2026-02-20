@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Switch,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -195,7 +196,11 @@ export default function ReviewScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <View style={styles.summaryIcon}>
-                <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+                {garage?.logo_url ? (
+                  <Image source={{ uri: garage.logo_url }} style={styles.summaryLogo} />
+                ) : (
+                  <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.garageName}>{garage?.name}</Text>
@@ -267,7 +272,11 @@ export default function ReviewScreen() {
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryIcon}>
-              <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+              {garage?.logo_url ? (
+                <Image source={{ uri: garage.logo_url }} style={styles.summaryLogo} />
+              ) : (
+                <MaterialCommunityIcons name="garage" size={28} color={COLORS.secondary} />
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.garageName}>{garage?.name}</Text>
@@ -416,6 +425,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.secondary + '12',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  summaryLogo: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   garageName: {
     fontSize: 17,

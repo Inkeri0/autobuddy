@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
-import { signIn, signUp } from '../services/auth';
+import { signIn, signUp, resetPassword } from '../services/auth';
 
 export default function LoginScreen() {
   const [isLogin, setIsLogin] = useState(true);
@@ -21,6 +21,22 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      Alert.alert('Fout', 'Vul eerst je e-mailadres in.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await resetPassword(email);
+      Alert.alert('E-mail verstuurd', 'Controleer je inbox voor een link om je wachtwoord te resetten.');
+    } catch (error: any) {
+      Alert.alert('Fout', error.message || 'Er is iets misgegaan.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -114,6 +130,12 @@ export default function LoginScreen() {
               secureTextEntry
             />
           </View>
+
+          {isLogin && (
+            <TouchableOpacity onPress={handleResetPassword} style={styles.forgotButton}>
+              <Text style={styles.forgotText}>Wachtwoord vergeten?</Text>
+            </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -300,5 +322,15 @@ const styles = StyleSheet.create({
   switchTextBold: {
     color: COLORS.primary,
     fontWeight: '700',
+  },
+  forgotButton: {
+    alignSelf: 'flex-end',
+    marginTop: -6,
+    marginBottom: 8,
+  },
+  forgotText: {
+    fontSize: 13,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

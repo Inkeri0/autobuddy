@@ -26,6 +26,11 @@ export async function signOut() {
   if (error) throw error;
 }
 
+export async function resetPassword(email: string) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
+  if (error) throw error;
+}
+
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;

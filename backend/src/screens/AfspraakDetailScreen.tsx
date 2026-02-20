@@ -8,13 +8,15 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Image,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS } from '../constants';
 import { BookingStatus } from '../types';
-import { fetchBookingById, cancelBooking } from '../services/garageService';
+import { fetchBookingById, cancelBooking, fetchUserCars } from '../services/garageService';
+import { useAuth } from '../hooks/useAuth';
 import { formatDateLongNL } from '../utils/dateFormatters';
 import LicensePlate from '../components/LicensePlate';
 
@@ -49,10 +51,12 @@ export default function AfspraakDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { bookingId } = route.params;
 
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [carPhotoUrl, setCarPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookingById(bookingId)
@@ -63,6 +67,17 @@ export default function AfspraakDetailScreen() {
       })
       .finally(() => setLoading(false));
   }, [bookingId]);
+
+  // Fetch the car photo by matching license plate
+  useEffect(() => {
+    if (!user?.id || !booking?.car_license_plate) return;
+    fetchUserCars(user.id)
+      .then((cars) => {
+        const match = cars.find((c: any) => c.license_plate === booking.car_license_plate);
+        if (match?.photo_url) setCarPhotoUrl(match.photo_url);
+      })
+      .catch(() => {});
+  }, [user?.id, booking?.car_license_plate]);
 
   const handleCancel = () => {
     Alert.alert(
@@ -208,7 +223,11 @@ export default function AfspraakDetailScreen() {
           <View style={styles.card}>
             <View style={styles.carRow}>
               <View style={styles.carImagePlaceholder}>
-                <MaterialCommunityIcons name="car-side" size={28} color={COLORS.textLight} />
+                {carPhotoUrl ? (
+                  <Image source={{ uri: carPhotoUrl }} style={styles.carPhoto} />
+                ) : (
+                  <MaterialCommunityIcons name="car-side" size={28} color={COLORS.textLight} />
+                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.carLabel}>UW VOERTUIG</Text>
@@ -517,6 +536,12 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  carPhoto: {
+    width: 60,
+    height: 44,
+    borderRadius: 8,
   },
   carLabel: {
     fontSize: 11,

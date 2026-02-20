@@ -1,11 +1,35 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
+
+const prefix = Linking.createURL('/');
+
+const linking: LinkingOptions<any> = {
+  prefixes: [prefix, 'carye://'],
+  config: {
+    screens: {
+      MainTabs: {
+        screens: {
+          Home: 'home',
+          Afspraken: 'afspraken',
+          MijnAuto: 'auto',
+          Profile: 'profiel',
+        },
+      },
+      GarageDetail: 'garage/:garageId',
+      Booking: 'booking/:garageId/:serviceId',
+      AfspraakDetail: 'afspraak/:bookingId',
+      Review: 'review/:bookingId',
+      GarageReviews: 'reviews/:garageId',
+    },
+  },
+};
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -113,7 +137,7 @@ export default function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       <Stack.Navigator
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.surface },
