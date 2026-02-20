@@ -18,6 +18,7 @@ import { ServiceCategory } from '../types';
 import { useAuth } from '../hooks/useAuth';
 import { useGarages } from '../hooks/useGarages';
 import { fetchUserBookings } from '../services/garageService';
+import { formatDateNL } from '../utils/dateFormatters';
 
 const QUICK_SERVICES: { category: ServiceCategory; icon: string }[] = [
   { category: 'apk', icon: 'clipboard-check-outline' },
@@ -41,15 +42,6 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: COLORS.success,
   in_progress: COLORS.primary,
 };
-
-function formatDateNL(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();

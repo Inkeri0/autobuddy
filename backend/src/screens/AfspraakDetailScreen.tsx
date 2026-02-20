@@ -12,9 +12,11 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SERVICE_LABELS } from '../constants';
-import { ServiceCategory, BookingStatus } from '../types';
+import { COLORS } from '../constants';
+import { BookingStatus } from '../types';
 import { fetchBookingById, cancelBooking } from '../services/garageService';
+import { formatDateLongNL } from '../utils/dateFormatters';
+import LicensePlate from '../components/LicensePlate';
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   pending: 'In afwachting',
@@ -42,64 +44,6 @@ const STATUS_ICONS: Record<BookingStatus, string> = {
   cancelled: 'close-circle-outline',
   no_show: 'account-alert-outline',
 };
-
-function formatDateNL(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const days = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag', 'Zaterdag'];
-  const months = [
-    'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec',
-  ];
-  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}, ${date.getFullYear()}`;
-}
-
-/* Dutch license plate inline component */
-function LicensePlate({ plate }: { plate: string }) {
-  return (
-    <View style={plateStyles.wrapper}>
-      <View style={plateStyles.blueStrip}>
-        <Text style={plateStyles.nlText}>NL</Text>
-      </View>
-      <View style={plateStyles.yellowBg}>
-        <Text style={plateStyles.plateText}>{plate}</Text>
-      </View>
-    </View>
-  );
-}
-
-const plateStyles = StyleSheet.create({
-  wrapper: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    height: 32,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#1a1a2e',
-    overflow: 'hidden',
-  },
-  blueStrip: {
-    width: 20,
-    backgroundColor: '#003DA5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nlText: {
-    color: '#FFFFFF',
-    fontSize: 7,
-    fontWeight: '800',
-  },
-  yellowBg: {
-    backgroundColor: '#FFCC00',
-    justifyContent: 'center',
-    paddingHorizontal: 10,
-  },
-  plateText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#1a1a2e',
-    letterSpacing: 1.5,
-  },
-});
 
 export default function AfspraakDetailScreen() {
   const route = useRoute<any>();
@@ -220,7 +164,7 @@ export default function AfspraakDetailScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.dateLabel}>Datum & Tijd</Text>
-              <Text style={styles.dateValue}>{formatDateNL(booking.date)}</Text>
+              <Text style={styles.dateValue}>{formatDateLongNL(booking.date)}</Text>
               <Text style={styles.timeValue}>{booking.time_slot} uur</Text>
             </View>
           </View>

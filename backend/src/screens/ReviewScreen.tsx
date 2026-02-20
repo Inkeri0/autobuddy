@@ -15,14 +15,14 @@ import {
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, SERVICE_LABELS } from '../constants';
-import { ServiceCategory } from '../types';
+import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchBookingById,
   fetchReviewForBooking,
   createReview,
 } from '../services/garageService';
+import { formatDateFullMonthNL } from '../utils/dateFormatters';
 
 const STAR_GOLD = '#F59E0B';
 const STAR_FADED = '#F59E0B33';
@@ -67,15 +67,6 @@ function StarDisplayRow({ rating, size = 16 }: { rating: number; size?: number }
       ))}
     </View>
   );
-}
-
-function formatDateNL(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
 }
 
 export default function ReviewScreen() {
@@ -209,7 +200,7 @@ export default function ReviewScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.garageName}>{garage?.name}</Text>
                 <Text style={styles.serviceDate}>
-                  {service?.name} {'\u2022'} {formatDateNL(booking.date)}
+                  {service?.name} {'\u2022'} {formatDateFullMonthNL(booking.date)}
                 </Text>
                 {(carInfo || plateInfo) && (
                   <Text style={styles.carInfo}>
@@ -281,7 +272,7 @@ export default function ReviewScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.garageName}>{garage?.name}</Text>
               <Text style={styles.serviceDate}>
-                {service?.name} {'\u2022'} {formatDateNL(booking.date)}
+                {service?.name} {'\u2022'} {formatDateFullMonthNL(booking.date)}
               </Text>
               {(carInfo || plateInfo) && (
                 <Text style={styles.carInfo}>

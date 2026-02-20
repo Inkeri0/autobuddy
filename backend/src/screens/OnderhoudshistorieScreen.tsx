@@ -21,30 +21,8 @@ import {
   fetchMaintenanceForCar,
   fetchUserCars,
 } from '../services/garageService';
-
-// ============================================
-// HELPERS
-// ============================================
-
-function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const day = date.getDate().toString().padStart(2, '0');
-  const months = ['JAN', 'FEB', 'MRT', 'APR', 'MEI', 'JUN', 'JUL', 'AUG', 'SEP', 'OKT', 'NOV', 'DEC'];
-  const month = months[date.getMonth()];
-  const year = date.getFullYear();
-  return `${day} ${month} ${year}`;
-}
-
-function daysUntil(dateStr: string): number {
-  const target = new Date(dateStr + 'T00:00:00');
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function formatMileage(km: number): string {
-  return km.toLocaleString('nl-NL');
-}
+import { formatDateUpperNL, daysUntil, formatMileage } from '../utils/dateFormatters';
+import LicensePlate from '../components/LicensePlate';
 
 /**
  * Dutch APK interval rules:
@@ -105,60 +83,6 @@ function getServiceLabel(record: any): string {
   return serviceName || 'Onderhoud';
 }
 
-// ============================================
-// DUTCH LICENSE PLATE
-// ============================================
-
-function LicensePlate({ plate }: { plate: string }) {
-  return (
-    <View style={plateStyles.container}>
-      <View style={plateStyles.blueStrip}>
-        <Text style={plateStyles.nlText}>NL</Text>
-      </View>
-      <View style={plateStyles.plateBody}>
-        <Text style={plateStyles.plateText}>{plate}</Text>
-      </View>
-    </View>
-  );
-}
-
-const plateStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    borderRadius: 4,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#00000020',
-    alignSelf: 'flex-start',
-  },
-  blueStrip: {
-    backgroundColor: '#003DA5',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    justifyContent: 'center',
-  },
-  nlText: {
-    color: '#fff',
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  plateBody: {
-    backgroundColor: '#FFD700',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    justifyContent: 'center',
-  },
-  plateText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#000',
-    letterSpacing: 1,
-  },
-});
-
-// ============================================
-// MAIN SCREEN
-// ============================================
 
 export default function OnderhoudshistorieScreen() {
   const route = useRoute<any>();
@@ -327,7 +251,7 @@ export default function OnderhoudshistorieScreen() {
               </Text>
               {displayPlate ? (
                 <View style={{ marginTop: 8 }}>
-                  <LicensePlate plate={displayPlate} />
+                  <LicensePlate plate={displayPlate} size="sm" />
                 </View>
               ) : null}
             </View>
@@ -414,7 +338,7 @@ export default function OnderhoudshistorieScreen() {
                       <View style={styles.cardHeaderRow}>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.cardDate, isFirst && styles.cardDateFirst]}>
-                            {formatDateShort(item.service_date)}
+                            {formatDateUpperNL(item.service_date)}
                           </Text>
                           <Text style={styles.cardServiceName}>APK Keuring</Text>
                         </View>
@@ -428,7 +352,7 @@ export default function OnderhoudshistorieScreen() {
                         <View style={styles.cardInfoItem}>
                           <MaterialCommunityIcons name="calendar-clock" size={16} color={COLORS.textLight} />
                           <Text style={styles.cardInfoText}>
-                            Geldig t/m {formatDateShort(item._apkExpiry)}
+                            Geldig t/m {formatDateUpperNL(item._apkExpiry)}
                           </Text>
                         </View>
                       </View>
@@ -474,7 +398,7 @@ export default function OnderhoudshistorieScreen() {
                     <View style={styles.cardHeaderRow}>
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.cardDate, isFirst && styles.cardDateFirst]}>
-                          {formatDateShort(item.service_date)}
+                          {formatDateUpperNL(item.service_date)}
                         </Text>
                         <Text style={styles.cardServiceName}>{getServiceLabel(item)}</Text>
                       </View>

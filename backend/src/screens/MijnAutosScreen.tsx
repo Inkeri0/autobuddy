@@ -31,6 +31,7 @@ import {
   uploadCarPhoto,
 } from '../services/garageService';
 import { Car } from '../types';
+import LicensePlate from '../components/LicensePlate';
 
 interface CarForm {
   brand: string;
@@ -52,55 +53,6 @@ const EMPTY_FORM: CarForm = {
   fuel_type: '',
 };
 
-/* ── Dutch license plate component ─────────────────────────── */
-function LicensePlate({ plate }: { plate: string }) {
-  return (
-    <View style={plateStyles.wrapper}>
-      <View style={plateStyles.blueStrip}>
-        <Text style={plateStyles.nlText}>NL</Text>
-      </View>
-      <View style={plateStyles.yellowBg}>
-        <Text style={plateStyles.plateText}>{plate}</Text>
-      </View>
-    </View>
-  );
-}
-
-const plateStyles = StyleSheet.create({
-  wrapper: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    height: 36,
-    borderRadius: 5,
-    borderWidth: 2,
-    borderColor: '#1a1a2e',
-    overflow: 'hidden',
-  },
-  blueStrip: {
-    width: 22,
-    backgroundColor: '#003DA5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  nlText: {
-    color: '#FFFFFF',
-    fontSize: 8,
-    fontWeight: '800',
-  },
-  yellowBg: {
-    backgroundColor: '#FFCC00',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  plateText: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#1a1a2e',
-    letterSpacing: 1.5,
-  },
-});
-
-/* ── Main screen ───────────────────────────────────────────── */
 export default function MijnAutosScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
@@ -475,7 +427,7 @@ export default function MijnAutosScreen() {
 
       {/* License plate */}
       <View style={{ marginTop: 14, marginBottom: 6 }}>
-        <LicensePlate plate={item.license_plate} />
+        <LicensePlate plate={item.license_plate} size="lg" />
       </View>
 
       {/* Action buttons */}

@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { fetchUserBookings, cancelBooking } from '../services/garageService';
 import { BookingStatus } from '../types';
 import StarDisplay from '../components/StarDisplay';
+import { formatDateCompactNL, formatDateShortNL } from '../utils/dateFormatters';
 
 type SegmentTab = 'aankomend' | 'verleden';
 
@@ -54,25 +55,6 @@ function getServiceIcon(serviceName?: string): string {
   if (name.includes('grote beurt') || name.includes('major')) return 'cog';
   if (name.includes('carrosserie') || name.includes('body')) return 'car-side';
   return 'wrench';
-}
-
-function formatDateNL(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const days = ['Zo', 'Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za'];
-  const months = [
-    'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec',
-  ];
-  return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`;
-}
-
-function formatFullDateNL(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  const months = [
-    'Jan', 'Feb', 'Mrt', 'Apr', 'Mei', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec',
-  ];
-  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 export default function MijnAfsprakenScreen() {
@@ -305,7 +287,7 @@ export default function MijnAfsprakenScreen() {
                       color={COLORS.textLight}
                     />
                     <Text style={styles.dateTimeText}>
-                      {formatDateNL(item.date)}
+                      {formatDateCompactNL(item.date)}
                     </Text>
                   </View>
                   <View style={styles.dateTimeItem}>
@@ -393,7 +375,7 @@ export default function MijnAfsprakenScreen() {
                 {/* Bottom row: date + review/stars */}
                 <View style={styles.pastBottomRow}>
                   <Text style={styles.pastDate}>
-                    {formatFullDateNL(item.date)}
+                    {formatDateShortNL(item.date)}
                   </Text>
                   {isCompleted && !item.user_rating ? (
                     <TouchableOpacity
