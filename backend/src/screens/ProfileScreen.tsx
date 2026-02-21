@@ -141,7 +141,9 @@ export default function ProfileScreen() {
   };
 
   const handlePress = (key: string) => {
-    if (key === 'notifications' || key === 'settings' || key === 'help') {
+    if (key === 'help') {
+      navigation.navigate('HelpSupport');
+    } else if (key === 'notifications' || key === 'settings') {
       Alert.alert('Binnenkort beschikbaar', 'Deze functie wordt binnenkort toegevoegd.');
     } else if (key === 'MijnAfspraken') {
       navigation.navigate('MainTabs', { screen: 'Afspraken' });

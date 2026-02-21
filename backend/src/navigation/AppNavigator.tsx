@@ -46,6 +46,7 @@ import AfspraakDetailScreen from '../screens/AfspraakDetailScreen';
 import ReviewScreen from '../screens/ReviewScreen';
 import GarageReviewsScreen from '../screens/GarageReviewsScreen';
 import OnderhoudshistorieScreen from '../screens/OnderhoudshistorieScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -201,6 +202,11 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Onderhoudshistorie"
               component={OnderhoudshistorieScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen
+              name="HelpSupport"
+              component={HelpSupportScreen}
               options={{ headerShown: false }}
             />
           </>
