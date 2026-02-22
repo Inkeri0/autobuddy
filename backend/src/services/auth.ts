@@ -94,3 +94,19 @@ export async function uploadAvatar(userId: string, uri: string): Promise<string>
 export function getAvatarUrl(user: any): string | null {
   return user?.user_metadata?.avatar_url || null;
 }
+
+// ============================================
+// ACCOUNT DELETION
+// ============================================
+
+export async function requestAccountDeletion(userId: string, email: string, name: string, reason?: string): Promise<void> {
+  const { error } = await supabase
+    .from('account_deletion_requests')
+    .insert({
+      user_id: userId,
+      user_email: email,
+      user_name: name,
+      reason: reason || null,
+    });
+  if (error) throw error;
+}

@@ -6,6 +6,7 @@ export async function fetchGarages() {
     .from('garages')
     .select('*')
     .eq('is_active', true)
+    .eq('approval_status', 'approved')
     .order('average_rating', { ascending: false });
 
   if (error) throw error;
@@ -52,7 +53,8 @@ export async function fetchGaragesByService(category: string) {
     .from('garages')
     .select('*')
     .in('id', garageIds)
-    .eq('is_active', true);
+    .eq('is_active', true)
+    .eq('approval_status', 'approved');
 
   if (error) throw error;
   return garages || [];
@@ -529,6 +531,7 @@ export async function seedCompletedBooking(userId: string) {
     .from('garages')
     .select('id, name')
     .eq('is_active', true)
+    .eq('approval_status', 'approved')
     .limit(1)
     .single();
 

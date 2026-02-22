@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../constants';
 import { useAuth } from '../hooks/useAuth';
-import { signOut, uploadAvatar, getAvatarUrl } from '../services/auth';
+import { signOut, uploadAvatar, getAvatarUrl, requestAccountDeletion } from '../services/auth';
 
 const QUICK_ACTIONS = [
   { key: 'MijnAfspraken', icon: 'calendar-month', label: 'Mijn afspraken' },
@@ -140,6 +140,50 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Account verwijderen',
+      'Weet je zeker dat je een verzoek wilt indienen om je account te verwijderen? Een beheerder zal je verzoek verwerken.',
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Ja, dien verzoek in',
+          style: 'destructive',
+          onPress: () => {
+            Alert.prompt(
+              'Reden (optioneel)',
+              'Waarom wil je je account verwijderen?',
+              [
+                { text: 'Annuleren', style: 'cancel' },
+                { text: 'Versturen', onPress: (reason?: string) => submitDeletionRequest(reason) },
+              ],
+              'plain-text'
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const submitDeletionRequest = async (reason?: string) => {
+    try {
+      await requestAccountDeletion(
+        user!.id,
+        user!.email || '',
+        fullName,
+        reason,
+      );
+      // Sign out immediately, then show confirmation
+      await signOut();
+      Alert.alert(
+        'Verzoek ingediend',
+        'Je verzoek om je account te verwijderen is ontvangen. We verwerken dit zo snel mogelijk.',
+      );
+    } catch (err: any) {
+      Alert.alert('Fout', 'Kon verzoek niet indienen. Probeer het opnieuw.');
+    }
+  };
+
   const handlePress = (key: string) => {
     if (key === 'help') {
       navigation.navigate('HelpSupport');
@@ -247,9 +291,19 @@ export default function ProfileScreen() {
         <Text style={styles.logoutText}>Uitloggen</Text>
       </TouchableOpacity>
 
+      {/* Delete Account */}
+      <TouchableOpacity
+        style={styles.deleteButton}
+        onPress={handleDeleteAccount}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons name="account-remove-outline" size={18} color={COLORS.danger} />
+        <Text style={styles.deleteText}>Account verwijderen</Text>
+      </TouchableOpacity>
+
       {/* Version */}
       <Text style={styles.version}>
-        CarYe v2.4.0 {'\u2022'} Gemaakt met passie
+        CarYe v0.1.0 {'\u2022'} Gemaakt met passie
       </Text>
     </ScrollView>
   );
@@ -432,11 +486,27 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  // Delete account
+  deleteButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingVertical: 14,
+    gap: 6,
+  },
+  deleteText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.danger,
+  },
+
   // Version
   version: {
     textAlign: 'center',
     fontSize: 12,
     color: COLORS.textLight,
-    marginTop: 20,
+    marginTop: 12,
   },
 });
